@@ -1,0 +1,11 @@
+{
+  "name": "splitwise",
+  "version": "1.0.0",
+  "description": "Splitwise clone that manage and track expenses.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "imkunal01",
+  "license": "ISC"
+}
