@@ -781,16 +781,22 @@ function ExpensesTab({ groupId, members, group, currentUserId }) {
     return (
         <div>
             {/* Header */}
-            <div className="mb-4 flex items-center justify-between">
-                <p className="text-sm text-gray-400">
-                    {expenses.length} {expenses.length === 1 ? "expense" : "expenses"}
-                </p>
+            <div className="mb-5 flex items-center justify-between">
+                <div>
+                    <h2 className="text-base font-semibold text-white">Expenses</h2>
+                    <p className="text-xs text-gray-500 mt-0.5">
+                        {expenses.length === 0
+                            ? "No expenses yet — add one or import a CSV"
+                            : `${expenses.length} ${expenses.length === 1 ? "expense" : "expenses"} logged`
+                        }
+                    </p>
+                </div>
                 <button
                     id="add-expense-button"
                     onClick={() => setShowAddModal(true)}
-                    className="flex items-center gap-1.5 rounded-xl border border-indigo-500/40 bg-indigo-600/10 px-3 py-1.5 text-xs font-semibold text-indigo-300 transition hover:bg-indigo-600 hover:text-white hover:border-transparent"
+                    className="flex items-center gap-2 rounded-xl bg-indigo-600 px-3.5 py-2 text-sm font-semibold text-white transition hover:bg-indigo-500"
                 >
-                    <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                     </svg>
                     Add Expense
@@ -1025,9 +1031,21 @@ function BalancesTab({ groupId, currentUserId }) {
     return (
         <div className="space-y-8">
 
+            {/* ── Explainer banner ── */}
+            <div className="rounded-xl bg-indigo-500/5 border border-indigo-500/20 px-4 py-3 flex items-start gap-3">
+                <svg className="mt-0.5 h-4 w-4 shrink-0 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <p className="text-sm text-gray-400">
+                    <span className="font-medium text-gray-200">How balances work: </span>
+                    A positive balance means the group owes that person money. A negative balance means they owe the group.
+                    Click any member to see their expense breakdown.
+                </p>
+            </div>
+
             {/* ── Section A: Net Balances ── */}
             <div>
-                <h2 className="mb-4 text-base font-semibold text-gray-200">Who owes what</h2>
+                <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-gray-500">Net balances</h2>
                 <div className="space-y-2">
                     {netBalances.map((m) => {
                         const isYou = m.userId === currentUserId;
@@ -1071,11 +1089,15 @@ function BalancesTab({ groupId, currentUserId }) {
 
             {/* ── Section B: Suggested Payments ── */}
             <div>
-                <h2 className="mb-4 text-base font-semibold text-gray-200">How to settle up</h2>
+                <div className="mb-3 flex items-center justify-between">
+                    <h2 className="text-sm font-semibold uppercase tracking-wider text-gray-500">Suggested payments</h2>
+                    <span className="text-xs text-gray-600">Minimised transactions</span>
+                </div>
                 {transactions.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-gray-700 py-12 text-center">
+                    <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-emerald-700/30 bg-emerald-500/5 py-10 text-center">
                         <div className="mb-2 text-4xl">🎉</div>
-                        <p className="text-sm font-medium text-gray-300">Everyone is settled up!</p>
+                        <p className="text-base font-semibold text-white">All settled up!</p>
+                        <p className="mt-1 text-sm text-gray-400">No payments needed right now.</p>
                     </div>
                 ) : (
                     <div className="overflow-hidden rounded-2xl border border-gray-700/40">
@@ -1120,7 +1142,11 @@ function BalancesTab({ groupId, currentUserId }) {
 
 // ─── GroupDetail ───────────────────────────────────────────────────────────────
 
-const TABS = ["Expenses", "Balances", "Members"];
+const TABS = [
+    { id: "Expenses",  label: "Expenses",  sub: "All logged costs" },
+    { id: "Balances",  label: "Balances",  sub: "Who owes whom" },
+    { id: "Members",   label: "Members",   sub: "Manage the group" },
+];
 
 export default function GroupDetail() {
     const { groupId } = useParams();
@@ -1128,7 +1154,7 @@ export default function GroupDetail() {
     const { user } = useAuth();
     const [data, setData] = useState(null);
     const [isLoading, setIsLoading] = useState(true);
-    const [activeTab, setActiveTab] = useState("Members");
+    const [activeTab, setActiveTab] = useState("Expenses");
 
     const fetchGroup = useCallback(async () => {
         try {
@@ -1185,30 +1211,54 @@ export default function GroupDetail() {
             </header>
 
             {/* ── Group Header ── */}
-            <div className="mx-auto max-w-7xl px-4 pt-8 pb-4 sm:px-6">
-                <h1 className="text-3xl font-bold tracking-tight text-white sm:text-4xl">
-                    {group.name}
-                </h1>
-                <p className="mt-1 text-sm text-gray-400">
-                    Created {formatDate(group.createdAt)}
-                </p>
+            <div className="mx-auto max-w-7xl px-4 pt-8 pb-5 sm:px-6">
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                    <div className="space-y-2">
+                        <h1 className="text-2xl font-bold tracking-tight text-white sm:text-3xl">
+                            {group.name}
+                        </h1>
+                        <div className="flex flex-wrap items-center gap-2">
+                            <span className="inline-flex items-center gap-1.5 rounded-full bg-gray-800 border border-gray-700/60 px-2.5 py-1 text-xs font-medium text-gray-400">
+                                <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
+                                </svg>
+                                {members.length} {members.length === 1 ? "member" : "members"}
+                            </span>
+                            <span className="text-xs text-gray-600">·</span>
+                            <span className="text-xs text-gray-500">Created {formatDate(group.createdAt)}</span>
+                        </div>
+                    </div>
+                    <button
+                        id="import-csv-button"
+                        onClick={() => navigate(`/groups/${groupId}/import`)}
+                        className="flex shrink-0 items-center gap-2 self-start rounded-xl border border-indigo-500/40 bg-indigo-600/10 px-4 py-2.5 text-sm font-semibold text-indigo-300 transition hover:bg-indigo-600 hover:text-white hover:border-transparent focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    >
+                        <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                                d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
+                        </svg>
+                        Import CSV
+                    </button>
+                </div>
             </div>
 
             {/* ── Tabs ── */}
             <div className="mx-auto max-w-7xl px-4 sm:px-6">
-                <div className="flex gap-1 border-b border-gray-700/40">
-                    {TABS.map((tab) => (
+                <div className="flex border-b border-gray-700/40">
+                    {TABS.map(({ id, label, sub }) => (
                         <button
-                            key={tab}
-                            id={`tab-${tab.toLowerCase()}`}
-                            onClick={() => setActiveTab(tab)}
-                            className={`relative px-4 py-2.5 text-sm font-medium transition-colors ${activeTab === tab
+                            key={id}
+                            id={`tab-${id.toLowerCase()}`}
+                            onClick={() => setActiveTab(id)}
+                            className={`relative flex flex-col items-start px-4 py-3 text-left transition-colors ${
+                                activeTab === id
                                     ? "text-indigo-400"
                                     : "text-gray-400 hover:text-gray-200"
-                                }`}
+                            }`}
                         >
-                            {tab}
-                            {activeTab === tab && (
+                            <span className="text-sm font-semibold">{label}</span>
+                            <span className={`text-xs mt-0.5 ${activeTab === id ? "text-indigo-400/60" : "text-gray-600"}`}>{sub}</span>
+                            {activeTab === id && (
                                 <span className="absolute bottom-0 left-0 right-0 h-0.5 rounded-full bg-indigo-500" />
                             )}
                         </button>

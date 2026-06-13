@@ -10,17 +10,8 @@ import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import Dashboard from "./pages/Dashboard";
 import GroupDetail from "./pages/GroupDetail";
+import ImportPage from "./pages/ImportPage";
 import { Toaster } from "react-hot-toast";
-
-// ─── Placeholder Pages ────────────────────────────────────────────────────────
-
-function ImportPage() {
-    return (
-        <div className="flex h-screen items-center justify-center bg-gray-950 text-white">
-            <h1 className="text-2xl font-semibold">Import — coming soon</h1>
-        </div>
-    );
-}
 
 // ─── App ──────────────────────────────────────────────────────────────────────
 
