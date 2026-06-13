@@ -10,8 +10,10 @@ node_modules/
 dist/
 build/
 
-# ─── Vite Cache ───────────────────────────────────────────────────────────────
-.vite/
+# ─── Prisma ───────────────────────────────────────────────────────────────────
+# Keep prisma/schema.prisma and migrations in git.
+# Only ignore the generated client if it is committed by mistake.
+# prisma/generated/
 
 # ─── Logs ─────────────────────────────────────────────────────────────────────
 logs/
