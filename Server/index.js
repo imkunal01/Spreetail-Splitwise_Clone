@@ -21,9 +21,15 @@ const morganFormat = process.env.NODE_ENV === "production" ? "combined" : "dev";
 app.use(morgan(morganFormat, { stream: logger.morganStream }));
 
 // ─── Core Middleware ──────────────────────────────────────────────────────────
+// Trust Render's proxy so secure cookies work
+app.set("trust proxy", 1);
+
+// Safely handle trailing slashes in CLIENT_URL
+const clientUrl = process.env.CLIENT_URL ? process.env.CLIENT_URL.replace(/\/$/, "") : "http://localhost:5173";
+
 app.use(
     cors({
-        origin: process.env.CLIENT_URL || "http://localhost:5173",
+        origin: [clientUrl, "http://localhost:5173", "https://splitwise-one-rho.vercel.app"],
         credentials: true,
     })
 );
@@ -33,8 +39,8 @@ app.use(cookieParser());
 // ─── Routes ──────────────────────────────────────────────────────────────────
 app.use("/api/auth", authRoutes);
 app.use("/api/groups", groupRoutes);
-app.use("/api/expenses", expenseRoutes);
-app.use("/api/settlements", settlementRoutes);
+app.use("/api/groups", expenseRoutes);      // handles /:groupId/expenses and /:groupId/balances
+app.use("/api/groups", settlementRoutes);   // handles /:groupId/settlements
 app.use("/api/import", importRoutes);
 app.use("/api/currency", currencyRoutes);
 
