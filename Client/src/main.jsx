@@ -8,24 +8,11 @@ import ProtectedRoute from "./components/ProtectedRoute";
 
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
+import Dashboard from "./pages/Dashboard";
+import GroupDetail from "./pages/GroupDetail";
+import { Toaster } from "react-hot-toast";
 
 // ─── Placeholder Pages ────────────────────────────────────────────────────────
-
-function Dashboard() {
-    return (
-        <div className="flex h-screen items-center justify-center bg-gray-950 text-white">
-            <h1 className="text-2xl font-semibold">Dashboard — coming soon</h1>
-        </div>
-    );
-}
-
-function GroupDetail() {
-    return (
-        <div className="flex h-screen items-center justify-center bg-gray-950 text-white">
-            <h1 className="text-2xl font-semibold">Group Detail — coming soon</h1>
-        </div>
-    );
-}
 
 function ImportPage() {
     return (
@@ -41,6 +28,18 @@ createRoot(document.getElementById("root")).render(
     <StrictMode>
         <BrowserRouter>
             <AuthProvider>
+                <Toaster
+                    position="top-right"
+                    toastOptions={{
+                        style: {
+                            background: "#1f2937",
+                            color: "#f9fafb",
+                            border: "1px solid #374151",
+                            borderRadius: "12px",
+                        },
+                        success: { iconTheme: { primary: "#6366f1", secondary: "#f9fafb" } },
+                    }}
+                />
                 <Routes>
                     {/* Public routes */}
                     <Route path="/login" element={<Login />} />

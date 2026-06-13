@@ -8,10 +8,12 @@ const router = Router();
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 
+const isProduction = process.env.NODE_ENV === "production";
+
 const COOKIE_OPTIONS = {
     httpOnly: true,
-    sameSite: "lax",
-    secure: false,
+    sameSite: isProduction ? "none" : "lax",
+    secure: isProduction, // must be true for sameSite: "none"
     maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days in ms
 };
 
