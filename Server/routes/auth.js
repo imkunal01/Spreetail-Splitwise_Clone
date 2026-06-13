@@ -125,10 +125,12 @@ router.post("/logout", async (req, res) => {
     }
 });
 
-// ─── GET /me ──────────────────────────────────────────────────────────────────
-// Protected — requires auth middleware to have populated req.user
+const { requireAuth } = require("../middleware/auth");
 
-router.get("/me", async (req, res) => {
+// ─── GET /me ──────────────────────────────────────────────────────────────────
+// Protected — uses auth middleware to verify JWT and populate req.user
+
+router.get("/me", requireAuth, async (req, res) => {
     try {
         const user = await prisma.user.findUnique({
             where: { id: req.user.userId },
