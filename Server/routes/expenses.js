@@ -225,6 +225,110 @@ router.delete("/:groupId/expenses/:expenseId", async (req, res) => {
     }
 });
 
+// ─── PATCH /:groupId/expenses/:expenseId/reassign ─────────────────────────────
+// Reassign an expense currently paid by the Unknown User (isGuest=true) to a
+// real active member of the group.
+// Body: { newPayerId: string }
+
+router.patch("/:groupId/expenses/:expenseId/reassign", async (req, res) => {
+    try {
+        const { groupId, expenseId } = req.params;
+        const { newPayerId } = req.body;
+
+        if (!newPayerId) {
+            return res.status(400).json({ error: "newPayerId is required" });
+        }
+
+        // ── 1. Fetch expense and verify it belongs to this group ─────────────
+        const expense = await prisma.expense.findUnique({
+            where: { id: expenseId },
+            include: {
+                paidBy: { select: { id: true, name: true, isGuest: true } },
+            },
+        });
+
+        if (!expense || expense.groupId !== groupId) {
+            return res.status(404).json({ error: "Expense not found" });
+        }
+
+        // ── 2. Only guest/Unknown-User expenses can be reassigned ────────────
+        if (!expense.paidBy.isGuest) {
+            return res.status(400).json({
+                error: "Only expenses paid by Unknown User can be reassigned",
+            });
+        }
+
+        // ── 3. Verify newPayerId is an active member of the group ────────────
+        const expenseDate = new Date(expense.date);
+
+        const activeMembership = await prisma.groupMembership.findFirst({
+            where: {
+                groupId,
+                userId: newPayerId,
+                joinedAt: { lte: expenseDate },
+                OR: [{ leftAt: null }, { leftAt: { gte: expenseDate } }],
+            },
+        });
+
+        if (!activeMembership) {
+            return res.status(400).json({
+                error: "newPayerId is not an active member of the group on the expense date",
+            });
+        }
+
+        // ── 4 & 5. Update paidById; recalculate splits if EQUAL ─────────────
+        const amountINR = Number(expense.amountInr);
+
+        const updatedExpense = await prisma.$transaction(async (tx) => {
+            // Always update the payer
+            const updated = await tx.expense.update({
+                where: { id: expenseId },
+                data:  { paidById: newPayerId },
+            });
+
+            // Recalculate splits only for EQUAL split type
+            if (expense.splitType === "EQUAL") {
+                const activeMembers = await getActiveMembersOnDate(groupId, expenseDate, tx);
+
+                if (activeMembers.length === 0) {
+                    throw new Error("No active members found for this group on the expense date");
+                }
+
+                const splitsInput  = activeMembers.map((m) => ({ userId: m.userId, value: 0 }));
+                const newSplits    = calculateSplits("EQUAL", amountINR, splitsInput);
+
+                // Replace old splits
+                await tx.expenseSplit.deleteMany({ where: { expenseId } });
+                await tx.expenseSplit.createMany({
+                    data: newSplits.map((s) => ({
+                        expenseId,
+                        userId:     s.userId,
+                        amountOwed: new Prisma.Decimal(s.amountOwed),
+                    })),
+                });
+            }
+
+            return updated;
+        });
+
+        // ── 6. Return full updated expense ────────────────────────────────────
+        const fullExpense = await prisma.expense.findUnique({
+            where: { id: updatedExpense.id },
+            include: {
+                paidBy: { select: { id: true, name: true, email: true, isGuest: true } },
+                splits: {
+                    include: { user: { select: { id: true, name: true, isGuest: true } } },
+                },
+            },
+        });
+
+        return res.status(200).json({ expense: fullExpense });
+    } catch (err) {
+        console.error("[PATCH /:groupId/expenses/:expenseId/reassign]", err);
+        return res.status(500).json({ error: "Internal server error" });
+    }
+});
+
 // ─── GET /:groupId/balances ───────────────────────────────────────────────────
 // Returns net balances, simplified settlement transactions, and a per-user
 // expense breakdown for the group.
