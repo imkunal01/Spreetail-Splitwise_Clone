@@ -79,7 +79,7 @@ router.post("/signup", async (req, res) => {
         const token = signToken(user);
         res.cookie("token", token, COOKIE_OPTIONS);
 
-        return res.status(201).json({ user: safeUser(user) });
+        return res.status(201).json({ user: safeUser(user), token });
     } catch (err) {
         console.error("[POST /signup]", err);
         return res.status(500).json({ error: "Internal server error" });
@@ -108,7 +108,7 @@ router.post("/login", async (req, res) => {
         const token = signToken(user);
         res.cookie("token", token, COOKIE_OPTIONS);
 
-        return res.status(200).json({ user: safeUser(user) });
+        return res.status(200).json({ user: safeUser(user), token });
     } catch (err) {
         console.error("[POST /login]", err);
         return res.status(500).json({ error: "Internal server error" });
