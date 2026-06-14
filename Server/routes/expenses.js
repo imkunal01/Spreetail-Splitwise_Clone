@@ -133,7 +133,7 @@ router.post("/:groupId/expenses", async (req, res) => {
         const fullExpense = await prisma.expense.findUnique({
             where: { id: expense.id },
             include: {
-                paidBy: { select: { id: true, name: true, email: true } },
+                paidBy: { select: { id: true, name: true, email: true, isGuest: true } },
                 splits: {
                     include: { user: { select: { id: true, name: true } } },
                 },
@@ -164,7 +164,7 @@ router.get("/:groupId/expenses", async (req, res) => {
         const expenses = await prisma.expense.findMany({
             where: { groupId },
             include: {
-                paidBy: { select: { id: true, name: true, email: true } },
+                paidBy: { select: { id: true, name: true, email: true, isGuest: true } },
                 splits: {
                     include: { user: { select: { id: true, name: true } } },
                 },
@@ -236,14 +236,15 @@ router.get("/:groupId/balances", async (req, res) => {
         // ── STEP 1: Fetch all memberships ─────────────────────────────────────
         const memberships = await prisma.groupMembership.findMany({
             where: { groupId },
-            include: { user: { select: { id: true, name: true } } },
+            include: { user: { select: { id: true, name: true, isGuest: true } } },
         });
 
-        // memberMap: { [userId]: { name, joinedAt, leftAt } }
+        // memberMap: { [userId]: { name, isGuest, joinedAt, leftAt } }
         const memberMap = {};
         for (const m of memberships) {
             memberMap[m.userId] = {
                 name: m.user.name,
+                isGuest: m.user.isGuest,
                 joinedAt: new Date(m.joinedAt),
                 leftAt: m.leftAt ? new Date(m.leftAt) : null,
             };
@@ -316,23 +317,27 @@ router.get("/:groupId/balances", async (req, res) => {
             if (balances[s.payeeId] !== undefined) balances[s.payeeId] -= Number(s.amount);
         }
 
-        // ── STEP 6: Build netBalances array ───────────────────────────────────
+        // ── STEP 6: Build netBalances array (include isGuest for client rendering) ──
         const netBalances = Object.entries(balances).map(([userId, balance]) => ({
             userId,
             name: memberMap[userId]?.name || "Unknown",
+            isGuest: memberMap[userId]?.isGuest || false,
             balance: Math.round(balance * 100) / 100,
         }));
 
-        // ── STEP 7: (breakdown already built in Step 4) ───────────────────────
+        // ── STEP 7: Flag whether any expense has an unknown/guest payer ───────
+        const hasUnknownExpenses = expenses.some((e) => memberMap[e.paidById]?.isGuest === true);
 
         // ── STEP 8: Debt simplification — greedy algorithm ────────────────────
+        // Exclude guest (unknown) users from settlement suggestions — their
+        // balance cannot be settled until the payer is reassigned.
         const creditors = netBalances
-            .filter((m) => m.balance > 0.01)
+            .filter((m) => !m.isGuest && m.balance > 0.01)
             .map((m) => ({ ...m }))
             .sort((a, b) => b.balance - a.balance);
 
         const debtors = netBalances
-            .filter((m) => m.balance < -0.01)
+            .filter((m) => !m.isGuest && m.balance < -0.01)
             .map((m) => ({ ...m }))
             .sort((a, b) => a.balance - b.balance);
 
@@ -361,9 +366,67 @@ router.get("/:groupId/balances", async (req, res) => {
         }
 
         // ── STEP 9: Respond ───────────────────────────────────────────────────
-        return res.status(200).json({ netBalances, transactions, breakdown });
+        return res.status(200).json({ netBalances, transactions, breakdown, hasUnknownExpenses });
     } catch (err) {
         console.error("[GET /:groupId/balances]", err);
+        return res.status(500).json({ error: "Internal server error" });
+    }
+});
+
+// ─── PATCH /:groupId/expenses/:expenseId/reassign ────────────────────────────
+// Reassigns the paidBy of an expense to a different group member.
+// Called by the UnknownUserBanner when the CSV-imported payer is "Unknown User".
+// Any authenticated group member may reassign (no owner restriction needed here
+// because the payer was already unknown).
+
+router.patch("/:groupId/expenses/:expenseId/reassign", async (req, res) => {
+    try {
+        const { groupId, expenseId } = req.params;
+        const { newPayerId } = req.body;
+
+        if (!newPayerId) {
+            return res.status(400).json({ error: "newPayerId is required" });
+        }
+
+        // ── 1. Verify expense exists and belongs to this group ─────────────────
+        const expense = await prisma.expense.findUnique({
+            where: { id: expenseId },
+            select: { id: true, groupId: true, paidById: true },
+        });
+
+        if (!expense || expense.groupId !== groupId) {
+            return res.status(404).json({ error: "Expense not found" });
+        }
+
+        // ── 2. Verify the new payer is an active member of the group ───────────
+        const membership = await prisma.groupMembership.findFirst({
+            where: { groupId, userId: newPayerId },
+            include: { user: { select: { id: true, name: true, isGuest: true } } },
+        });
+
+        if (!membership) {
+            return res.status(400).json({ error: "newPayerId is not a member of this group" });
+        }
+
+        if (membership.user.isGuest) {
+            return res.status(400).json({ error: "Cannot reassign to a guest user" });
+        }
+
+        // ── 3. Update the paidById ─────────────────────────────────────────────
+        const updated = await prisma.expense.update({
+            where: { id: expenseId },
+            data: { paidById: newPayerId },
+            include: {
+                paidBy: { select: { id: true, name: true, email: true, isGuest: true } },
+                splits: {
+                    include: { user: { select: { id: true, name: true } } },
+                },
+            },
+        });
+
+        return res.status(200).json({ expense: updated });
+    } catch (err) {
+        console.error("[PATCH /:groupId/expenses/:expenseId/reassign]", err);
         return res.status(500).json({ error: "Internal server error" });
     }
 });

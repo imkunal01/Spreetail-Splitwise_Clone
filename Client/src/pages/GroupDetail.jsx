@@ -3,6 +3,7 @@ import { useParams, useNavigate, Link } from "react-router-dom";
 import { toast } from "react-hot-toast";
 import api from "../api/axios";
 import { useAuth } from "../context/AuthContext";
+import UnknownUserBanner from "../components/UnknownUserBanner";
 
 // ─── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -858,10 +859,18 @@ function ExpensesTab({ groupId, members, group, currentUserId }) {
                                                 )}
                                             </td>
                                             {/* Paid By */}
-                                            <td className="whitespace-nowrap px-4 py-3 text-gray-300">
-                                                {exp.paidBy?.name}
-                                                {exp.paidBy?.id === currentUserId && (
-                                                    <span className="ml-1.5 text-xs text-gray-500">(you)</span>
+                                            <td className="whitespace-nowrap px-4 py-3">
+                                                {exp.paidBy?.isGuest ? (
+                                                    <span className="font-medium text-amber-400">
+                                                        Unknown User
+                                                    </span>
+                                                ) : (
+                                                    <span className="text-gray-300">
+                                                        {exp.paidBy?.name}
+                                                        {exp.paidBy?.id === currentUserId && (
+                                                            <span className="ml-1.5 text-xs text-gray-500">(you)</span>
+                                                        )}
+                                                    </span>
                                                 )}
                                             </td>
                                             {/* Amount */}
@@ -889,6 +898,21 @@ function ExpensesTab({ groupId, members, group, currentUserId }) {
                                         </tr>
                                     );
                                 })}
+                                {/* Unknown-payer banner rows — separate pass so each <tr> is a valid tbody sibling */}
+                                {expenses.filter((exp) => exp.paidBy?.isGuest).map((exp) => (
+                                    <tr key={`${exp.id}-banner`}>
+                                        <td colSpan={6} className="px-4 pb-3 pt-0 bg-gray-800/30">
+                                            <UnknownUserBanner
+                                                expense={exp}
+                                                groupId={groupId}
+                                                members={members.filter(
+                                                    (m) => !m.isGuest && m.status === "active"
+                                                )}
+                                                onReassigned={fetchExpenses}
+                                            />
+                                        </td>
+                                    </tr>
+                                ))}
                             </tbody>
                         </table>
                     </div>
