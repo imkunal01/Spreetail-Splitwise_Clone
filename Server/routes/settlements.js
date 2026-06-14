@@ -8,10 +8,11 @@ const router = Router({ mergeParams: true });
 router.use(requireAuth);
 
 // ─── Helper ───────────────────────────────────────────────────────────────────
-
-async function findActiveMember(groupId, userId) {
+// No leftAt filter — past members are allowed to settle debts they accrued
+// while they were still active.
+async function findMember(groupId, userId) {
     return prisma.groupMembership.findFirst({
-        where: { groupId, userId, leftAt: null },
+        where: { groupId, userId },
     });
 }
 
@@ -38,14 +39,14 @@ router.post("/:groupId/settlements", async (req, res) => {
         }
 
         // ── 3. Both must be active members ───────────────────────────────────
-        const payerMembership = await findActiveMember(groupId, payerId);
+        const payerMembership = await findMember(groupId, payerId);
         if (!payerMembership) {
-            return res.status(400).json({ error: "Payer is not an active member" });
+            return res.status(400).json({ error: "Payer is not a member of this group" });
         }
 
-        const payeeMembership = await findActiveMember(groupId, payeeId);
+        const payeeMembership = await findMember(groupId, payeeId);
         if (!payeeMembership) {
-            return res.status(400).json({ error: "Payee is not an active member" });
+            return res.status(400).json({ error: "Payee is not a member of this group" });
         }
 
         // ── 4. Date must be a valid date string ───────────────────────────────
