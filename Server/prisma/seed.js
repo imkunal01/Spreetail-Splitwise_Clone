@@ -5,6 +5,7 @@
 // Usage: npm run seed  (from the Server directory)
 // ──────────────────────────────────────────────────────────────────────────────
 
+require('dotenv').config()          // must load before lib/prisma creates the pg Pool
 const prisma = require('../lib/prisma')
 const bcrypt = require('bcryptjs')
 
