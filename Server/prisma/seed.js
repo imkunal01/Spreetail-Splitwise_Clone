@@ -16,8 +16,8 @@ const MEMBERSHIPS = [
   { name: 'Rohan', joinedAt: '2026-02-01', leftAt: null },
   { name: 'Priya', joinedAt: '2026-02-01', leftAt: null },
   { name: 'Meera', joinedAt: '2026-02-01', leftAt: '2026-03-28' },
-  { name: 'Dev',   joinedAt: '2026-02-08', leftAt: '2026-03-14' },
-  { name: 'Sam',   joinedAt: '2026-04-10', leftAt: null },
+  { name: 'Dev', joinedAt: '2026-02-08', leftAt: '2026-03-14' },
+  { name: 'Sam', joinedAt: '2026-04-10', leftAt: null },
 ]
 
 // Deterministic UUID for the seed group so the value is stable across re-runs.
@@ -25,16 +25,16 @@ const MEMBERSHIPS = [
 const SEED_GROUP_ID = 'a1b2c3d4-e5f6-7890-abcd-ef1234567890'
 const SEED_GROUP_NAME = 'Flat 2026'
 
-async function main () {
+async function main() {
   // ── STEP 1 — Unknown User placeholder ──────────────────────────────────────
   await prisma.user.upsert({
-    where:  { email: 'unknown@splitmate.local' },
+    where: { email: 'unknown@splitmate.local' },
     update: {},
     create: {
-      name:         'Unknown User',
-      email:        'unknown@splitmate.local',
+      name: 'Unknown User',
+      email: 'unknown@splitmate.local',
       passwordHash: await bcrypt.hash('placeholder', 12),
-      isGuest:      true,
+      isGuest: true,
     },
   })
   console.log('✓ Unknown User created')
@@ -48,8 +48,8 @@ async function main () {
     { name: 'Rohan', email: 'rohan@splitmate.com' },
     { name: 'Priya', email: 'priya@splitmate.com' },
     { name: 'Meera', email: 'meera@splitmate.com' },
-    { name: 'Dev',   email: 'dev@splitmate.com'   },
-    { name: 'Sam',   email: 'sam@splitmate.com'   },
+    { name: 'Dev', email: 'dev@splitmate.com' },
+    { name: 'Sam', email: 'sam@splitmate.com' },
   ]
 
   /** @type {Record<string, { id: string, name: string, email: string }>} */
@@ -57,13 +57,13 @@ async function main () {
 
   for (const def of userDefs) {
     const user = await prisma.user.upsert({
-      where:  { email: def.email },
+      where: { email: def.email },
       update: {},
       create: {
-        name:         def.name,
-        email:        def.email,
+        name: def.name,
+        email: def.email,
         passwordHash: sharedHash,
-        isGuest:      false,
+        isGuest: false,
       },
     })
     users[def.name] = { id: user.id, name: user.name, email: user.email }
@@ -72,11 +72,11 @@ async function main () {
 
   // ── STEP 3 — Group ──────────────────────────────────────────────────────────
   const group = await prisma.group.upsert({
-    where:  { id: SEED_GROUP_ID },
+    where: { id: SEED_GROUP_ID },
     update: {},
     create: {
-      id:          SEED_GROUP_ID,
-      name:        SEED_GROUP_NAME,
+      id: SEED_GROUP_ID,
+      name: SEED_GROUP_NAME,
       createdById: users['Aisha'].id,
     },
   })
@@ -95,9 +95,9 @@ async function main () {
       await prisma.groupMembership.create({
         data: {
           userId,
-          groupId:  group.id,
+          groupId: group.id,
           joinedAt: new Date(joinedAtStr),
-          leftAt:   leftAtStr ? new Date(leftAtStr) : null,
+          leftAt: leftAtStr ? new Date(leftAtStr) : null,
         },
       })
     }
