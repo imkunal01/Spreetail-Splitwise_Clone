@@ -44,6 +44,12 @@ app.use("/api/groups", settlementRoutes);   // handles /:groupId/settlements
 app.use("/api/import", importRoutes);
 app.use("/api/currency", currencyRoutes);
 
+// ─── Keep-Alive Cron ──────────────────────────────────────────────────────────
+// GET /api/cron — lightweight endpoint for uptime bots (Render keep-alive)
+app.get("/api/cron", (_req, res) => {
+    res.status(200).json({ status: "active", timestamp: new Date().toISOString() });
+});
+
 // ─── Health Check ─────────────────────────────────────────────────────────────
 // GET /api/health  — checks server liveness + Supabase DB connectivity
 app.get("/api/health", async (_req, res) => {
@@ -100,6 +106,6 @@ app.use((err, _req, res, _next) => {
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
     logger.info(
-        `Plitwire server running in ${process.env.NODE_ENV || "development"} mode on port ${PORT}`
+        `Splitwire server running in ${process.env.NODE_ENV || "development"} mode on port ${PORT}`
     );
 });
