@@ -4,6 +4,7 @@ import { toast } from "react-hot-toast";
 import api from "../api/axios";
 import { useAuth } from "../context/AuthContext";
 import UnknownUserBanner from "../components/UnknownUserBanner";
+import BalancesTab from "../components/BalancesTab";
 
 // ─── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -931,238 +932,9 @@ function ExpensesTab({ groupId, members, group, currentUserId }) {
     );
 }
 
-// ─── Currency formatter (shared by Balances components) ─────────────────────
-
-function fmtRupee(amount) {
-    return new Intl.NumberFormat("en-IN", {
-        style: "currency",
-        currency: "INR",
-        minimumFractionDigits: 2,
-    }).format(amount);
-}
-
-// ─── Expense Breakdown Modal ───────────────────────────────────────────────────
-
-function ExpenseBreakdownModal({ userId, userName, breakdown, onClose }) {
-    const entries = breakdown || [];
-    const total = entries.reduce((sum, e) => sum + Math.abs(Number(e.amountOwed)), 0);
-
-    return (
-        <Modal title={`${userName}'s breakdown`} onClose={onClose}>
-            {entries.length === 0 ? (
-                <p className="py-6 text-center text-sm text-gray-400">No expense data available</p>
-            ) : (
-                <div className="max-h-[60vh] overflow-y-auto">
-                    <table className="min-w-full text-sm">
-                        <thead>
-                            <tr className="border-b border-gray-700">
-                                {["Date", "Description", "Amount"].map((h) => (
-                                    <th key={h} className="pb-2 pr-4 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">
-                                        {h}
-                                    </th>
-                                ))}
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-gray-700/40">
-                            {entries.map((e, i) => (
-                                <tr key={i} className="hover:bg-gray-800/30">
-                                    <td className="whitespace-nowrap py-2.5 pr-4 text-gray-400">
-                                        {new Date(e.date).toLocaleDateString("en-IN", {
-                                            day: "2-digit", month: "short", year: "numeric",
-                                        })}
-                                    </td>
-                                    <td className="py-2.5 pr-4 text-gray-200">
-                                        {e.description.length > 35
-                                            ? e.description.slice(0, 35) + "…"
-                                            : e.description}
-                                        {e.isRefund && (
-                                            <span className="ml-1.5 text-xs font-medium text-emerald-400">(refund)</span>
-                                        )}
-                                    </td>
-                                    <td className="whitespace-nowrap py-2.5 text-right text-white">
-                                        {fmtRupee(Math.abs(Number(e.amountOwed)))}
-                                    </td>
-                                </tr>
-                            ))}
-                        </tbody>
-                        <tfoot>
-                            <tr className="border-t border-gray-600">
-                                <td className="pt-3 text-xs font-bold uppercase tracking-wider text-gray-400">Total</td>
-                                <td />
-                                <td className="pt-3 text-right font-bold text-white">{fmtRupee(total)}</td>
-                            </tr>
-                        </tfoot>
-                    </table>
-                </div>
-            )}
-        </Modal>
-    );
-}
 
 // ─── Balances Tab ──────────────────────────────────────────────────────────────
-
-function BalancesTab({ groupId, currentUserId }) {
-    const [balanceData, setBalanceData] = useState(null);
-    const [isLoading, setIsLoading] = useState(true);
-    const [breakdownTarget, setBreakdownTarget] = useState(null); // { userId, name }
-
-    const fetchBalances = useCallback(async () => {
-        try {
-            const res = await api.get(`/api/groups/${groupId}/balances`);
-            setBalanceData(res.data);
-        } catch {
-            toast.error("Failed to load balances");
-        } finally {
-            setIsLoading(false);
-        }
-    }, [groupId]);
-
-    useEffect(() => { fetchBalances(); }, [fetchBalances]);
-
-    async function handleSettle(tx) {
-        const confirmed = window.confirm(
-            `Record that ${tx.fromName} paid ${tx.toName} ${fmtRupee(tx.amount)}?`
-        );
-        if (!confirmed) return;
-        try {
-            await api.post(`/api/groups/${groupId}/settlements`, {
-                payerId: tx.fromUserId,
-                payeeId: tx.toUserId,
-                amount: tx.amount,
-                date: new Date().toISOString().split("T")[0],
-            });
-            toast.success("Settlement recorded");
-            // Always refetch — never manually patch state
-            const res = await api.get(`/api/groups/${groupId}/balances`);
-            setBalanceData(res.data);
-        } catch (err) {
-            toast.error(err.response?.data?.error || "Failed to record settlement");
-        }
-    }
-
-    if (isLoading) {
-        return (
-            <div className="flex items-center justify-center py-24">
-                <div className="h-8 w-8 animate-spin rounded-full border-4 border-indigo-500 border-t-transparent" />
-            </div>
-        );
-    }
-
-    if (!balanceData) return null;
-
-    const { netBalances, transactions, breakdown } = balanceData;
-
-    return (
-        <div className="space-y-8">
-
-            {/* ── Explainer banner ── */}
-            <div className="rounded-xl bg-indigo-500/5 border border-indigo-500/20 px-4 py-3 flex items-start gap-3">
-                <svg className="mt-0.5 h-4 w-4 shrink-0 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                <p className="text-sm text-gray-400">
-                    <span className="font-medium text-gray-200">How balances work: </span>
-                    A positive balance means the group owes that person money. A negative balance means they owe the group.
-                    Click any member to see their expense breakdown.
-                </p>
-            </div>
-
-            {/* ── Section A: Net Balances ── */}
-            <div>
-                <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-gray-500">Net balances</h2>
-                <div className="space-y-2">
-                    {netBalances.map((m) => {
-                        const isYou = m.userId === currentUserId;
-                        const isOwed = m.balance > 0.01;
-                        const isOwing = m.balance < -0.01;
-                        const isSettled = !isOwed && !isOwing;
-
-                        const borderColor = isOwed
-                            ? "border-l-4 border-emerald-500"
-                            : isOwing
-                                ? "border-l-4 border-rose-500"
-                                : "border-l-4 border-gray-600";
-
-                        return (
-                            <button
-                                key={m.userId}
-                                id={`balance-card-${m.userId}`}
-                                onClick={() => setBreakdownTarget({ userId: m.userId, name: m.name })}
-                                className={`w-full text-left rounded-xl bg-gray-800/50 px-4 py-3 transition hover:bg-gray-800 ${borderColor}`}
-                            >
-                                <div className="flex items-center justify-between">
-                                    <span className="font-medium text-white">
-                                        {m.name}
-                                        {isYou && <span className="ml-2 text-xs text-gray-500">(you)</span>}
-                                    </span>
-                                    <span className={`text-sm font-semibold ${isOwed ? "text-emerald-400" : isOwing ? "text-rose-400" : "text-gray-400"
-                                        }`}>
-                                        {isOwed
-                                            ? `is owed ${fmtRupee(m.balance)}`
-                                            : isOwing
-                                                ? `owes ${fmtRupee(Math.abs(m.balance))}`
-                                                : "is all settled up ✓"}
-                                    </span>
-                                </div>
-                                <p className="mt-0.5 text-xs text-gray-500">Click to see breakdown</p>
-                            </button>
-                        );
-                    })}
-                </div>
-            </div>
-
-            {/* ── Section B: Suggested Payments ── */}
-            <div>
-                <div className="mb-3 flex items-center justify-between">
-                    <h2 className="text-sm font-semibold uppercase tracking-wider text-gray-500">Suggested payments</h2>
-                    <span className="text-xs text-gray-600">Minimised transactions</span>
-                </div>
-                {transactions.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-emerald-700/30 bg-emerald-500/5 py-10 text-center">
-                        <div className="mb-2 text-4xl">🎉</div>
-                        <p className="text-base font-semibold text-white">All settled up!</p>
-                        <p className="mt-1 text-sm text-gray-400">No payments needed right now.</p>
-                    </div>
-                ) : (
-                    <div className="overflow-hidden rounded-2xl border border-gray-700/40">
-                        {transactions.map((tx, i) => (
-                            <div
-                                key={i}
-                                className="flex items-center justify-between border-b border-gray-700/40 px-5 py-4 last:border-b-0 bg-gray-800/30 hover:bg-gray-800/60 transition"
-                            >
-                                <div className="flex items-center gap-3">
-                                    <span className="font-medium text-white">{tx.fromName}</span>
-                                    <svg className="h-4 w-4 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
-                                    </svg>
-                                    <span className="font-medium text-white">{tx.toName}</span>
-                                    <span className="font-semibold text-indigo-300">{fmtRupee(tx.amount)}</span>
-                                </div>
-                                <button
-                                    id={`settle-${tx.fromUserId}-${tx.toUserId}`}
-                                    onClick={() => handleSettle(tx)}
-                                    className="rounded-lg border border-emerald-500/30 bg-emerald-600/10 px-3 py-1.5 text-xs font-semibold text-emerald-400 transition hover:bg-emerald-600 hover:text-white hover:border-transparent"
-                                >
-                                    Mark Settled
-                                </button>
-                            </div>
-                        ))}
-                    </div>
-                )}
-            </div>
-
-            {/* ── Breakdown modal ── */}
-            {breakdownTarget && (
-                <ExpenseBreakdownModal
-                    userId={breakdownTarget.userId}
-                    userName={breakdownTarget.name}
-                    breakdown={breakdown[breakdownTarget.userId]}
-                    onClose={() => setBreakdownTarget(null)}
-                />
-            )}
-        </div>
-    );
-}
+// Moved to Client/src/components/BalancesTab.jsx — imported above.
 
 // ─── GroupDetail ───────────────────────────────────────────────────────────────
 
@@ -1304,6 +1076,7 @@ export default function GroupDetail() {
                     <BalancesTab
                         groupId={groupId}
                         currentUserId={user?.id}
+                        onSwitchToExpenses={() => setActiveTab("Expenses")}
                     />
                 )}
                 {activeTab === "Members" && (
