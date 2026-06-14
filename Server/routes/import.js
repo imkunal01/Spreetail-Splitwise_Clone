@@ -15,6 +15,7 @@ const {
     normalizeSplits,
     computeRowHash,
 } = require("../lib/splitCalculator");
+const { resolveName, extractAllNames, inferMembershipDates, levenshtein } = require("../lib/nameResolver");
 const { Prisma } = require("@prisma/client");
 const crypto = require("crypto");
 const axios = require("axios");
@@ -25,9 +26,10 @@ router.use(requireAuth);
 const upload = multer({ storage: multer.memoryStorage() });
 
 // ─────────────────────────────────────────────────────────────────────────────
-// HELPER: parseDate
-// Tries multiple date formats in order, returns { date: Date, format: String }
-// or null if nothing matched / resulted in an invalid date.
+// HELPER: parseDate(str)
+//
+// Tries multiple date formats in order.
+// Returns { date: Date, format: string, wasAssumedYear: boolean } or null.
 // ─────────────────────────────────────────────────────────────────────────────
 
 const MONTH_MAP = {
@@ -39,43 +41,43 @@ function parseDate(str) {
     if (!str || typeof str !== "string") return null;
     const s = str.trim();
 
-    // ── DD-MM-YYYY ─────────────────────────────────────────────────────────
+    // ── 1. DD-MM-YYYY ──────────────────────────────────────────────────────────
     {
         const m = s.match(/^(\d{2})-(\d{2})-(\d{4})$/);
         if (m) {
             const [, dd, mm, yyyy] = m;
             const date = new Date(Date.UTC(+yyyy, +mm - 1, +dd));
             if (!isNaN(date.getTime())) {
-                return { date, format: "DD-MM-YYYY" };
+                return { date, format: "DD-MM-YYYY", wasAssumedYear: false };
             }
         }
     }
 
-    // ── YYYY-MM-DD (ISO) ───────────────────────────────────────────────────
+    // ── 2. YYYY-MM-DD (ISO) ────────────────────────────────────────────────────
     {
         const m = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
         if (m) {
             const [, yyyy, mm, dd] = m;
             const date = new Date(Date.UTC(+yyyy, +mm - 1, +dd));
             if (!isNaN(date.getTime())) {
-                return { date, format: "YYYY-MM-DD" };
+                return { date, format: "YYYY-MM-DD", wasAssumedYear: false };
             }
         }
     }
 
-    // ── DD/MM/YYYY ─────────────────────────────────────────────────────────
+    // ── 3. DD/MM/YYYY ──────────────────────────────────────────────────────────
     {
         const m = s.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
         if (m) {
             const [, dd, mm, yyyy] = m;
             const date = new Date(Date.UTC(+yyyy, +mm - 1, +dd));
             if (!isNaN(date.getTime())) {
-                return { date, format: "DD/MM/YYYY" };
+                return { date, format: "DD/MM/YYYY", wasAssumedYear: false };
             }
         }
     }
 
-    // ── "Mar-14" style (no year) ───────────────────────────────────────────
+    // ── 4. MMM-DD (no year — assume current year) ──────────────────────────────
     {
         const m = s.match(/^([A-Za-z]{3})-(\d{1,2})$/);
         if (m) {
@@ -85,7 +87,7 @@ function parseDate(str) {
                 const currentYear = new Date().getFullYear();
                 const date = new Date(Date.UTC(currentYear, monthIndex, +day));
                 if (!isNaN(date.getTime())) {
-                    return { date, format: "MON-DD", assumedYear: currentYear };
+                    return { date, format: "MON-DD", wasAssumedYear: true };
                 }
             }
         }
@@ -95,9 +97,10 @@ function parseDate(str) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// HELPER: isAmbiguousDate
-// Returns { ambiguous: true, ddmm: Date, mmdd: Date } when both interpretations
-// of a DD-MM-YYYY string are calendar-valid (i.e. day <= 12 AND month <= 12).
+// HELPER: isAmbiguousDate(str)
+//
+// Only for DD-MM-YYYY strings where day <= 12 AND month <= 12.
+// Returns { ambiguous: true, ddmm: Date, mmdd: Date } or { ambiguous: false }.
 // ─────────────────────────────────────────────────────────────────────────────
 
 function isAmbiguousDate(str) {
@@ -109,7 +112,6 @@ function isAmbiguousDate(str) {
     const d1 = +p1;
     const d2 = +p2;
 
-    // Ambiguous only when both values fit either position (1–12 each)
     if (d1 > 12 || d2 > 12) return { ambiguous: false };
 
     const ddmm = new Date(Date.UTC(+yyyy, d2 - 1, d1)); // p1=day, p2=month
@@ -121,75 +123,17 @@ function isAmbiguousDate(str) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// HELPER: levenshtein
-// Iterative DP Levenshtein distance between two strings.
-// ─────────────────────────────────────────────────────────────────────────────
-
-function levenshtein(a, b) {
-    const m = a.length;
-    const n = b.length;
-    // prev[j] = edit distance between a[0..i-1] and b[0..j-1]
-    let prev = Array.from({ length: n + 1 }, (_, j) => j);
-
-    for (let i = 1; i <= m; i++) {
-        const curr = [i];
-        for (let j = 1; j <= n; j++) {
-            const cost = a[i - 1] === b[j - 1] ? 0 : 1;
-            curr[j] = Math.min(
-                prev[j] + 1,       // deletion
-                curr[j - 1] + 1,   // insertion
-                prev[j - 1] + cost // substitution
-            );
-        }
-        prev = curr;
-    }
-    return prev[n];
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// HELPER: resolveMemberName
-// Tries exact match, then fuzzy (Levenshtein <= 2).
-// Returns { found, suggestion, distance }
-// ─────────────────────────────────────────────────────────────────────────────
-
-function resolveMemberName(rawName, groupMembers) {
-    const normalizedRaw = rawName.trim().toLowerCase();
-
-    // ── 1. Exact match (case-insensitive) ──────────────────────────────────
-    const exact = groupMembers.find(
-        (m) => m.name.toLowerCase() === normalizedRaw
-    );
-    if (exact) return { found: exact, suggestion: null, distance: 0 };
-
-    // ── 2. Fuzzy match (Levenshtein <= 2) ──────────────────────────────────
-    let bestMember = null;
-    let bestDist = Infinity;
-
-    for (const member of groupMembers) {
-        const dist = levenshtein(normalizedRaw, member.name.toLowerCase());
-        if (dist <= 2 && dist < bestDist) {
-            bestDist = dist;
-            bestMember = member;
-        }
-    }
-
-    if (bestMember) {
-        return { found: null, suggestion: bestMember, distance: bestDist };
-    }
-
-    return { found: null, suggestion: null, distance: Infinity };
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// HELPER: fetchUsdRate
-// Fetches live USD→INR rate from Frankfurter API; falls back to 83.50.
+// HELPER: fetchUsdRate()
+//
+// Fetches live USD→INR exchange rate from Frankfurter API.
+// Falls back to 83.50 on any error.
 // ─────────────────────────────────────────────────────────────────────────────
 
 async function fetchUsdRate() {
     try {
         const response = await axios.get(
             "https://api.frankfurter.app/latest?from=USD&to=INR",
-            { timeout: 3000 }
+            { timeout: 4000 }
         );
         return response.data.rates.INR;
     } catch {
@@ -198,8 +142,10 @@ async function fetchUsdRate() {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// HELPER: getActiveMembersOnDate
-// Shared with expenses.js — returns memberships active on a given date.
+// HELPER: getActiveMembersOnDate(groupId, date, client)
+//
+// Returns all users who were active members of `groupId` on `date`.
+// Accepts a Prisma client or transaction client.
 // ─────────────────────────────────────────────────────────────────────────────
 
 async function getActiveMembersOnDate(groupId, date, client) {
@@ -215,207 +161,277 @@ async function getActiveMembersOnDate(groupId, date, client) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// HELPER: parseSplitDetails
-// Parses "Rohan 700; Priya 400" or "Aisha 1; Rohan 2" into
-// [{ name, value }] pairs.
-// ─────────────────────────────────────────────────────────────────────────────
-
-function parseSplitDetails(raw) {
-    if (!raw || !raw.trim()) return [];
-    return raw
-        .split(";")
-        .map((part) => part.trim())
-        .filter(Boolean)
-        .map((part) => {
-            // Last token is the number; everything before is the name
-            const tokens = part.trim().split(/\s+/);
-            const value = parseFloat(tokens[tokens.length - 1]);
-            const name = tokens.slice(0, tokens.length - 1).join(" ");
-            return { name: name.trim(), value: isNaN(value) ? 0 : value };
-        });
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// HELPER: normalizeSplitType
-// Maps CSV split_type labels to internal enum values.
-// ─────────────────────────────────────────────────────────────────────────────
-
-function normalizeSplitType(raw) {
-    if (!raw) return raw;
-    switch (raw.toLowerCase().trim()) {
-        case "unequal":    return "EXACT";
-        case "share":      return "RATIO";
-        case "equal":      return "EQUAL";
-        case "percentage": return "PERCENTAGE";
-        default:           return raw;
-    }
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
 // ROUTE 1: POST /api/import/:groupId/preview
-// Parses the CSV, runs all 15 anomaly checks, and returns clean + flagged rows.
+//
+// Accepts a multipart CSV upload, runs 20 anomaly checks on each row,
+// and returns:
+//   - cleanRows:   rows with no anomalies (ready to confirm as-is)
+//   - flaggedRows: rows with one or more anomalies (require user decisions)
+//   - nameResolution: summary of auto-resolved / needs-confirmation / unknown names
+//   - memberLeftDateSuggestions: existing members who may have left
+//   - usdRateUsed: the exchange rate that was applied for USD detection
 // ─────────────────────────────────────────────────────────────────────────────
 
 router.post("/:groupId/preview", upload.single("file"), async (req, res) => {
     try {
-        // ── Guard: file must exist ────────────────────────────────────────────
+        // ── Guard: file must be present ───────────────────────────────────────
         if (!req.file) {
-            return res.status(400).json({ error: "No file uploaded. Send a multipart/form-data request with field 'file'." });
+            return res.status(400).json({
+                error: "No file uploaded. Send a multipart/form-data request with field 'file'.",
+            });
         }
 
-        // ── 1. Parse CSV ──────────────────────────────────────────────────────
+        const { groupId } = req.params;
+
+        // ── A. Parse CSV ──────────────────────────────────────────────────────
+        // trim: false — we need raw values for anomaly detection (comma amounts, etc.)
         const rows = parse(req.file.buffer, {
             columns: true,
             skip_empty_lines: true,
-            trim: true,
+            trim: false,
         });
 
-        // ── 2 + 3 + 4. Run DB queries and external rate fetch in parallel ────
-        // IMPORTANT: do NOT await these sequentially. fetchUsdRate() calls
-        // api.frankfurter.app (European server) which can take 5–15 s from India.
-        // Awaiting it AFTER the DB queries leaves Supabase connections idle long
-        // enough for the server to terminate them ("Connection terminated
-        // unexpectedly"). Promise.all fires everything concurrently so DB
-        // connections are acquired AND released in ~100 ms regardless of how
-        // long the external HTTP call takes.
-        const [memberships, existingHashes, usdRate] = await Promise.all([
-            // 2. Group members
+        // ── B + C + D. Parallel DB queries + USD rate fetch ───────────────────
+        // IMPORTANT: use Promise.all so the Frankfurter HTTP call (slow from India)
+        // does not block Supabase connections from being released promptly.
+        const [memberships, existingExpenses, usdRate] = await Promise.all([
+            // B. Group members with isGuest flag
             prisma.groupMembership.findMany({
-                where: { groupId: req.params.groupId },
-                include: { user: { select: { id: true, name: true, email: true } } },
-            }),
-            // 3. Existing import hashes (dedup against DB)
-            prisma.expense.findMany({
-                where: {
-                    groupId: req.params.groupId,
-                    importedRowHash: { not: null },
+                where: { groupId },
+                include: {
+                    user: {
+                        select: { id: true, name: true, email: true, isGuest: true },
+                    },
                 },
+            }),
+            // C. Existing import hashes for dedup
+            prisma.expense.findMany({
+                where: { groupId, importedRowHash: { not: null } },
                 select: { importedRowHash: true },
             }),
-            // 4. Live USD→INR rate (falls back to 83.50 on timeout/error)
+            // D. Live USD→INR rate
             fetchUsdRate(),
         ]);
 
-        const groupMembers = memberships.map((m) => m.user);
-        const hashSet = new Set(existingHashes.map((e) => e.importedRowHash));
+        const knownUsers = memberships.map((m) => m.user);
+        const unknownUser = knownUsers.find((u) => u.email === "unknown@splitmate.local");
+        const existingHashSet = new Set(existingExpenses.map((e) => e.importedRowHash));
 
-        // ── 5. Process rows ───────────────────────────────────────────────────
+        // ── E. Extract and resolve all names ──────────────────────────────────
+        const allRawNames = extractAllNames(rows);
+        const nameResolutionMap = {};
+        for (const rawName of allRawNames) {
+            nameResolutionMap[rawName] = resolveName(rawName, knownUsers);
+        }
+
+        // ── F. Identify names that need guest-user creation ───────────────────
+        const namesToCreate = [];
+        for (const [raw, resolution] of Object.entries(nameResolutionMap)) {
+            if (resolution.status === "UNKNOWN") {
+                namesToCreate.push({
+                    raw,
+                    generatedEmail: `${raw.toLowerCase().replace(/[^a-z0-9]/g, "-")}-${crypto.randomBytes(3).toString("hex")}@splitmate.local`,
+                    inferredDates: inferMembershipDates(raw, rows),
+                });
+            }
+        }
+
+        // ── G. Build inferred left-date suggestions for existing members ──────
+        const memberLeftDateSuggestions = [];
+        for (const membership of memberships) {
+            if (membership.leftAt) continue; // already has a recorded leave date
+
+            const dates = inferMembershipDates(membership.user.name, rows);
+            if (dates.lastSeen) {
+                const daysSinceLastSeen = (Date.now() - dates.lastSeen.getTime()) / (1000 * 60 * 60 * 24);
+                if (daysSinceLastSeen > 30) {
+                    memberLeftDateSuggestions.push({
+                        userId: membership.userId,
+                        name: membership.user.name,
+                        lastSeenInCSV: dates.lastSeen,
+                        suggestion: `Last appears in CSV on ${dates.lastSeen.toISOString().split("T")[0]}. Set as leave date?`,
+                    });
+                }
+            }
+        }
+
+        // ── H. Process each row ───────────────────────────────────────────────
         const cleanRows = [];
         const flaggedRows = [];
 
-        // Track hashes seen within this CSV batch (for intra-batch dedup)
-        const batchHashes = new Map(); // hash → rowNumber
+        const batchHashes = new Map();     // hash → rowNumber  (intra-batch dedup)
+        const batchDescriptions = [];      // { rowNumber, date, description, amount, payer }
 
         for (let i = 0; i < rows.length; i++) {
             const row = rows[i];
             const rowNumber = i + 2; // row 1 = header
 
-            const anomalies = [];
-            const parsedData = {};
+            // ── PRE-PROCESS ───────────────────────────────────────────────────
 
-            // ── PRE-PROCESSING ───────────────────────────────────────────────
-
-            // (a) Strip commas from amount
+            // Amount — strip commas before parsing
             const rawAmount = (row.amount || "").replace(/,/g, "");
             const parsedAmount = parseFloat(rawAmount);
 
-            // (b) Resolve payer
-            const resolvedPayer = row.paid_by?.trim()
-                ? resolveMemberName(row.paid_by, groupMembers)
-                : { found: null, suggestion: null, distance: Infinity };
+            // Currency
+            const rawCurrency = (row.currency || "").trim().toUpperCase();
 
-            // (c) Normalize split_type
-            const normalizedSplitType = normalizeSplitType(row.split_type);
+            // Split type — normalize to internal enum
+            const rawSplitType = (row.split_type || "").trim().toLowerCase();
+            const SPLIT_TYPE_MAP = {
+                equal: "EQUAL",
+                unequal: "EXACT",
+                exact: "EXACT",
+                percentage: "PERCENTAGE",
+                share: "RATIO",
+                ratio: "RATIO",
+            };
+            const normalizedSplitType = SPLIT_TYPE_MAP[rawSplitType] || null;
 
-            // (d) Parse split_with names
-            const names = (row.split_with || "")
+            // Split-with names
+            const rawSplitNames = (row.split_with || "")
                 .split(";")
                 .map((n) => n.trim())
                 .filter(Boolean);
 
-            // (e) Parse split_details
-            const parsedSplitDetails = parseSplitDetails(row.split_details);
+            // Split details (raw string — kept for anomaly checks)
+            const splitDetails = (row.split_details || "").trim();
 
-            // (f) Parse date
-            const parsedDate = parseDate(row.date);
-            const ambiguityCheck = isAmbiguousDate(row.date);
+            // Payer resolution
+            const payerResolution = resolveName((row.paid_by || "").trim(), knownUsers);
 
-            // ── CHECK 1: MISSING_REQUIRED_FIELD ─────────────────────────────
-            {
-                const emptyFields = [];
-                if (!row.description?.trim()) emptyFields.push("description");
-                if (isNaN(parsedAmount))       emptyFields.push("amount");
-                if (!row.split_with?.trim())   emptyFields.push("split_with");
+            // Date parsing
+            const parsedDateResult = parseDate((row.date || "").trim());
+            const ambiguityCheck = isAmbiguousDate((row.date || "").trim());
 
-                if (emptyFields.length > 0) {
-                    anomalies.push({
-                        type: "MISSING_REQUIRED_FIELD",
-                        message: "Required field is empty (description, amount, or split_with)",
-                        detail: { emptyFields },
-                        options: ["skip"],
-                        defaultAction: "skip",
-                    });
-                }
-            }
+            const anomalies = [];
+            const autoNotes = [];
 
-            // ── CHECK 2: ZERO_AMOUNT ─────────────────────────────────────────
-            if (parsedAmount === 0) {
+            // ─────────────────────────────────────────────────────────────────
+            // CHECK 1: MISSING REQUIRED FIELDS
+            // ─────────────────────────────────────────────────────────────────
+            if (!row.description || !(row.description || "").trim()) {
                 anomalies.push({
-                    type: "ZERO_AMOUNT",
-                    message: "Amount is zero. This row appears to be a void or placeholder.",
-                    detail: { originalAmount: row.amount },
+                    type: "MISSING_REQUIRED_FIELD",
+                    message: "Description is empty.",
+                    detail: { field: "description" },
                     options: ["skip"],
                     defaultAction: "skip",
                 });
             }
 
-            // ── CHECK 3: NEGATIVE_AMOUNT ─────────────────────────────────────
+            if (isNaN(parsedAmount)) {
+                anomalies.push({
+                    type: "INVALID_AMOUNT",
+                    message: `Amount "${row.amount}" cannot be parsed as a number.`,
+                    detail: { rawAmount: row.amount },
+                    options: ["skip"],
+                    defaultAction: "skip",
+                });
+            }
+
+            if (!row.split_with || !(row.split_with || "").trim()) {
+                anomalies.push({
+                    type: "MISSING_SPLIT_WITH",
+                    message: "No members listed in split_with.",
+                    detail: {},
+                    options: ["skip"],
+                    defaultAction: "skip",
+                });
+            }
+
+            // ─────────────────────────────────────────────────────────────────
+            // CHECK 2: ZERO AMOUNT
+            // ─────────────────────────────────────────────────────────────────
+            if (!isNaN(parsedAmount) && parsedAmount === 0) {
+                anomalies.push({
+                    type: "ZERO_AMOUNT",
+                    message: "Amount is zero. Likely a void or placeholder row.",
+                    detail: { notes: row.notes },
+                    options: ["skip"],
+                    defaultAction: "skip",
+                });
+            }
+
+            // ─────────────────────────────────────────────────────────────────
+            // CHECK 3: NEGATIVE AMOUNT — treat as refund
+            // ─────────────────────────────────────────────────────────────────
             if (!isNaN(parsedAmount) && parsedAmount < 0) {
                 anomalies.push({
                     type: "NEGATIVE_AMOUNT",
-                    message: `Negative amount detected (${parsedAmount}). Could be a refund.`,
+                    message: `Negative amount (${parsedAmount}). Treat as refund?`,
                     detail: { amount: parsedAmount, notes: row.notes },
                     options: ["import_as_refund", "skip"],
                     defaultAction: "import_as_refund",
                 });
             }
 
-            // ── CHECK 4: UNPARSEABLE_DATE / ASSUMED_YEAR ─────────────────────
-            if (!parsedDate) {
+            // ─────────────────────────────────────────────────────────────────
+            // CHECK 4: COMMA IN AMOUNT — auto-fix, just log
+            // ─────────────────────────────────────────────────────────────────
+            if ((row.amount || "").includes(",") && !isNaN(parsedAmount)) {
+                autoNotes.push(
+                    `Amount "${row.amount}" had comma formatting — auto-cleaned to ${parsedAmount}`
+                );
+            }
+
+            // ─────────────────────────────────────────────────────────────────
+            // CHECK 5: EXCESSIVE DECIMAL PLACES — auto-round, just log
+            // ─────────────────────────────────────────────────────────────────
+            if (!isNaN(parsedAmount) && parsedAmount > 0) {
+                const decimalPart = rawAmount.split(".")[1] || "";
+                if (decimalPart.length > 2) {
+                    autoNotes.push(
+                        `Amount ${parsedAmount} has ${decimalPart.length} decimal places — ` +
+                        `will be rounded to ${Math.round(parsedAmount * 100) / 100}`
+                    );
+                }
+            }
+
+            // ─────────────────────────────────────────────────────────────────
+            // CHECK 6: UNPARSEABLE DATE / ASSUMED YEAR
+            // ─────────────────────────────────────────────────────────────────
+            if (!parsedDateResult) {
                 anomalies.push({
                     type: "UNPARSEABLE_DATE",
-                    message: `Cannot parse date "${row.date}". Please provide the correct date.`,
-                    detail: { originalDate: row.date },
+                    message: `Cannot parse date "${row.date}".`,
+                    detail: { rawDate: row.date },
                     options: ["skip"],
                     defaultAction: "skip",
                 });
-            } else if (parsedDate.assumedYear) {
+            } else if (parsedDateResult.wasAssumedYear) {
                 anomalies.push({
                     type: "ASSUMED_DATE_YEAR",
-                    message: `Date "${row.date}" had no year. Assumed ${parsedDate.assumedYear}.`,
-                    detail: { parsedAs: parsedDate.date, assumedYear: parsedDate.assumedYear },
+                    message: `Date "${row.date}" had no year. Assumed ${new Date().getFullYear()}.`,
+                    detail: {
+                        parsedAs: parsedDateResult.date.toISOString().split("T")[0],
+                        assumedYear: new Date().getFullYear(),
+                    },
                     options: ["import", "skip"],
                     defaultAction: "import",
                 });
             }
 
-            // ── CHECK 5: AMBIGUOUS_DATE ──────────────────────────────────────
-            if (parsedDate && ambiguityCheck.ambiguous) {
+            // ─────────────────────────────────────────────────────────────────
+            // CHECK 7: AMBIGUOUS DATE (DD-MM vs MM-DD)
+            // ─────────────────────────────────────────────────────────────────
+            if (parsedDateResult && ambiguityCheck.ambiguous) {
                 anomalies.push({
                     type: "AMBIGUOUS_DATE",
-                    message: `Date "${row.date}" is ambiguous (DD-MM or MM-DD?).`,
+                    message: `Date "${row.date}" could be DD-MM or MM-DD.`,
                     detail: {
-                        interpretationA: { label: "DD-MM (default)", date: ambiguityCheck.ddmm },
-                        interpretationB: { label: "MM-DD", date: ambiguityCheck.mmdd },
-                        csvNote: row.notes,
+                        asddmm: ambiguityCheck.ddmm.toISOString().split("T")[0],
+                        asmmdd: ambiguityCheck.mmdd.toISOString().split("T")[0],
+                        note: row.notes,
                     },
                     options: ["use_dd_mm", "use_mm_dd", "skip"],
                     defaultAction: "use_dd_mm",
                 });
             }
 
-            // ── CHECK 6: MISSING_CURRENCY ─────────────────────────────────────
-            if (!row.currency?.trim()) {
+            // ─────────────────────────────────────────────────────────────────
+            // CHECK 8: MISSING CURRENCY
+            // ─────────────────────────────────────────────────────────────────
+            if (!rawCurrency) {
                 anomalies.push({
                     type: "MISSING_CURRENCY",
                     message: "Currency field is empty.",
@@ -425,81 +441,106 @@ router.post("/:groupId/preview", upload.single("file"), async (req, res) => {
                 });
             }
 
-            // ── CHECK 7: USD_NO_EXCHANGE_RATE ────────────────────────────────
-            if (row.currency?.toUpperCase() === "USD") {
+            // ─────────────────────────────────────────────────────────────────
+            // CHECK 9: USD WITH NO IN-CSV EXCHANGE RATE
+            // ─────────────────────────────────────────────────────────────────
+            if (rawCurrency === "USD") {
+                const absAmount = Math.abs(parsedAmount);
                 anomalies.push({
                     type: "USD_NO_EXCHANGE_RATE",
-                    message: "Amount is in USD but no exchange rate is in the CSV.",
+                    message: "Amount is in USD. No exchange rate in CSV.",
                     detail: {
                         usdAmount: parsedAmount,
                         suggestedRate: usdRate,
-                        inrEquivalent: Math.round(parsedAmount * usdRate * 100) / 100,
+                        inrEquivalent: Math.round(absAmount * usdRate * 100) / 100,
                     },
                     options: ["apply_rate", "skip"],
                     defaultAction: "apply_rate",
                 });
             }
 
-            // ── CHECK 8: UNKNOWN_PAYER ───────────────────────────────────────
-            if (row.paid_by?.trim() && !resolvedPayer.found) {
-                if (resolvedPayer.suggestion) {
-                    anomalies.push({
-                        type: "UNKNOWN_PAYER",
-                        message: `Payer "${row.paid_by}" not found. Did you mean "${resolvedPayer.suggestion.name}"?`,
-                        detail: {
-                            original: row.paid_by,
-                            suggestion: resolvedPayer.suggestion,
-                            distance: resolvedPayer.distance,
-                        },
-                        options: ["use_suggestion", "skip"],
-                        defaultAction: "use_suggestion",
-                    });
-                } else {
-                    anomalies.push({
-                        type: "UNKNOWN_PAYER",
-                        message: `Payer "${row.paid_by}" not found and no close match exists.`,
-                        detail: { original: row.paid_by },
-                        options: ["skip"],
-                        defaultAction: "skip",
-                    });
-                }
-            }
-
-            // ── CHECK 9: MISSING_PAYER ───────────────────────────────────────
-            if (!row.paid_by?.trim()) {
+            // ─────────────────────────────────────────────────────────────────
+            // CHECK 10: MISSING PAYER
+            // ─────────────────────────────────────────────────────────────────
+            if (payerResolution.status === "EMPTY") {
                 anomalies.push({
                     type: "MISSING_PAYER",
-                    message: "No payer specified. Who paid for this expense?",
+                    message: `No payer specified. (note: "${row.notes}")`,
                     detail: {
-                        availableMembers: groupMembers.map((m) => ({ id: m.id, name: m.name })),
+                        availableMembers: knownUsers
+                            .filter((u) => !u.isGuest || u.email === "unknown@splitmate.local")
+                            .map((u) => ({ id: u.id, name: u.name })),
+                        unknownUserId: unknownUser?.id,
                     },
                     options: [
+                        "assign_to_unknown",
+                        ...knownUsers
+                            .filter((u) => u.email !== "unknown@splitmate.local")
+                            .map((u) => `assign_to_${u.id}`),
                         "skip",
-                        ...groupMembers.map((m) => `assign_to_${m.id}`),
                     ],
-                    defaultAction: "skip",
+                    defaultAction: "assign_to_unknown",
                 });
             }
 
-            // ── CHECK 10: SETTLEMENT_AS_EXPENSE ──────────────────────────────
+            // ─────────────────────────────────────────────────────────────────
+            // CHECK 11: UNKNOWN PAYER — SUGGESTED (fuzzy match)
+            // ─────────────────────────────────────────────────────────────────
+            if (payerResolution.status === "SUGGESTED") {
+                anomalies.push({
+                    type: "UNKNOWN_PAYER_SUGGESTION",
+                    message: `Payer "${row.paid_by}" not found. Did you mean "${payerResolution.suggestion.name}"?`,
+                    detail: {
+                        raw: row.paid_by,
+                        suggestion: payerResolution.suggestion,
+                        distance: payerResolution.distance,
+                    },
+                    options: ["use_suggestion", "skip"],
+                    defaultAction: "use_suggestion",
+                });
+            }
+
+            // ─────────────────────────────────────────────────────────────────
+            // CHECK 12: UNKNOWN PAYER — no match at all
+            // ─────────────────────────────────────────────────────────────────
+            if (payerResolution.status === "UNKNOWN") {
+                anomalies.push({
+                    type: "UNKNOWN_PAYER",
+                    message: `Payer "${row.paid_by}" not found and no close match.`,
+                    detail: { raw: row.paid_by, unknownUserId: unknownUser?.id },
+                    options: ["assign_to_unknown", "skip"],
+                    defaultAction: "assign_to_unknown",
+                });
+            }
+
+            // ─────────────────────────────────────────────────────────────────
+            // CHECK 12b: AUTO-RESOLVED NAME VARIATION — log only
+            // ─────────────────────────────────────────────────────────────────
+            if (payerResolution.status === "RESOLVED" && payerResolution.note) {
+                autoNotes.push(
+                    `Payer "${row.paid_by}" auto-resolved to "${payerResolution.resolved.name}" (${payerResolution.note})`
+                );
+            }
+
+            // ─────────────────────────────────────────────────────────────────
+            // CHECK 13: SETTLEMENT AS EXPENSE
+            // ─────────────────────────────────────────────────────────────────
             {
                 const settlementKeywords = [
                     "paid back", "settled", "transfer",
                     "reimbursed", "clearing", "deposit share",
                 ];
-                const descLower = row.description?.toLowerCase() || "";
-                const isOnePersonSplit = names.length === 1;
-                const hasEmptySplitType = !row.split_type?.trim();
+                const descLower = (row.description || "").toLowerCase();
+                const isOnePerson = rawSplitNames.length === 1;
+                const noSplitType = !(row.split_type || "").trim();
 
-                const looksLikeSettlement =
+                if (
                     settlementKeywords.some((k) => descLower.includes(k)) ||
-                    (isOnePersonSplit && hasEmptySplitType);
-
-                if (looksLikeSettlement) {
+                    (isOnePerson && noSplitType)
+                ) {
                     anomalies.push({
                         type: "SETTLEMENT_AS_EXPENSE",
-                        message:
-                            "This row looks like a payment/settlement between two people, not a shared expense.",
+                        message: "This looks like a payment between two people, not a shared expense.",
                         detail: { description: row.description, notes: row.notes },
                         options: ["import_as_settlement", "import_as_expense", "skip"],
                         defaultAction: "import_as_settlement",
@@ -507,208 +548,268 @@ router.post("/:groupId/preview", upload.single("file"), async (req, res) => {
                 }
             }
 
-            // ── CHECK 11: INACTIVE_MEMBER_IN_SPLIT ───────────────────────────
-            if (parsedDate) {
-                const inactiveMembers = [];
-
-                for (const name of names) {
-                    const resolved = resolveMemberName(name, groupMembers);
-                    if (!resolved.found) continue;
-
-                    const membership = memberships.find(
-                        (ms) => ms.userId === resolved.found.id
-                    );
-                    if (!membership) continue;
-
-                    const joinedAt = new Date(membership.joinedAt);
-                    const leftAt = membership.leftAt ? new Date(membership.leftAt) : null;
-                    const expDate = parsedDate.date;
-
-                    const isActive =
-                        joinedAt <= expDate && (leftAt === null || leftAt >= expDate);
-
-                    if (!isActive) {
-                        inactiveMembers.push(resolved.found.name);
+            // ─────────────────────────────────────────────────────────────────
+            // CHECK 14: INACTIVE MEMBER IN SPLIT
+            // ─────────────────────────────────────────────────────────────────
+            if (parsedDateResult) {
+                const inactiveInSplit = [];
+                for (const splitName of rawSplitNames) {
+                    const splitRes = resolveName(splitName, knownUsers);
+                    if (splitRes.status === "RESOLVED") {
+                        const membership = memberships.find(
+                            (ms) => ms.userId === splitRes.resolved.id
+                        );
+                        if (membership) {
+                            const expDate = parsedDateResult.date;
+                            const joined = new Date(membership.joinedAt);
+                            const left = membership.leftAt ? new Date(membership.leftAt) : null;
+                            const isActive =
+                                joined <= expDate && (left === null || left >= expDate);
+                            if (!isActive) {
+                                inactiveInSplit.push(splitRes.resolved.name);
+                            }
+                        }
                     }
                 }
-
-                if (inactiveMembers.length > 0) {
+                if (inactiveInSplit.length > 0) {
                     anomalies.push({
                         type: "INACTIVE_MEMBER_IN_SPLIT",
-                        message: `These members were not active on ${parsedDate.date.toISOString().split("T")[0]}: ${inactiveMembers.join(", ")}`,
-                        detail: { inactiveMembers, expenseDate: parsedDate.date },
+                        message: `These members were not active on this date: ${inactiveInSplit.join(", ")}`,
+                        detail: {
+                            inactiveMembers: inactiveInSplit,
+                            expenseDate: parsedDateResult.date,
+                        },
                         options: ["remove_inactive", "skip"],
                         defaultAction: "remove_inactive",
                     });
                 }
             }
 
-            // ── CHECK 12: UNKNOWN_MEMBER_IN_SPLIT ────────────────────────────
+            // ─────────────────────────────────────────────────────────────────
+            // CHECK 15: UNKNOWN MEMBER IN SPLIT
+            // ─────────────────────────────────────────────────────────────────
             {
-                const unknownMembers = [];
-                const typoSuggestions = []; // not raised as separate anomaly — folded into UNKNOWN_PAYER style
-
-                for (const name of names) {
-                    const resolved = resolveMemberName(name, groupMembers);
-                    if (!resolved.found && !resolved.suggestion) {
-                        unknownMembers.push(name);
+                const unknownInSplit = [];
+                for (const splitName of rawSplitNames) {
+                    const splitRes = resolveName(splitName, knownUsers);
+                    if (splitRes.status === "UNKNOWN") {
+                        unknownInSplit.push({ raw: splitName });
                     }
-                    // fuzzy typos in split_with are noted but not raised as a
-                    // separate anomaly — they will be accounted for in resolvedData
                 }
-
-                if (unknownMembers.length > 0) {
+                if (unknownInSplit.length > 0) {
                     anomalies.push({
                         type: "UNKNOWN_MEMBER_IN_SPLIT",
-                        message: `Unknown members in split: ${unknownMembers.join(", ")}`,
-                        detail: {
-                            unknownMembers,
-                            note: "These people have no account. Create guest user or remove from split.",
-                        },
-                        options: ["create_guest_user", "remove_from_split", "skip"],
+                        message: `Unknown members in split: ${unknownInSplit.map((u) => u.raw).join(", ")}`,
+                        detail: { unknownMembers: unknownInSplit },
+                        options: ["remove_from_split", "skip"],
                         defaultAction: "remove_from_split",
                     });
                 }
             }
 
-            // ── CHECK 13: DUPLICATE_EXACT ─────────────────────────────────────
-            if (parsedDate && resolvedPayer.found) {
-                const dateStr = parsedDate.date.toISOString().split("T")[0];
-                const hash = computeRowHash(
-                    dateStr,
-                    row.description,
-                    parsedAmount,
-                    resolvedPayer.found.id
+            // ─────────────────────────────────────────────────────────────────
+            // CHECK 16: INVALID / NONSTANDARD SPLIT TYPE
+            // ─────────────────────────────────────────────────────────────────
+            if (rawSplitType && !normalizedSplitType) {
+                anomalies.push({
+                    type: "INVALID_SPLIT_TYPE",
+                    message: `Split type "${row.split_type}" is not recognized.`,
+                    detail: { raw: row.split_type },
+                    options: ["skip"],
+                    defaultAction: "skip",
+                });
+            } else if (rawSplitType && normalizedSplitType && rawSplitType !== normalizedSplitType.toLowerCase()) {
+                autoNotes.push(`Split type "${row.split_type}" remapped to "${normalizedSplitType}"`);
+            }
+
+            // ─────────────────────────────────────────────────────────────────
+            // CHECK 17: PERCENTAGE SPLIT DOESN'T SUM TO 100
+            // ─────────────────────────────────────────────────────────────────
+            if (normalizedSplitType === "PERCENTAGE" && splitDetails) {
+                const percentageMatches = splitDetails.match(/[\d.]+%/g) || [];
+                const sum = percentageMatches.reduce(
+                    (acc, p) => acc + parseFloat(p),
+                    0
                 );
-                parsedData._hash = hash; // store for later use in confirm
-
-                const inDB = hashSet.has(hash);
-                const inBatch = batchHashes.has(hash);
-
-                if (inDB || inBatch) {
-                    anomalies.push({
-                        type: "DUPLICATE_EXACT",
-                        message:
-                            "This expense appears to already exist (same date, description, amount, and payer).",
-                        detail: { hash, source: inDB ? "database" : "current_csv" },
-                        options: ["import_anyway", "skip"],
-                        defaultAction: "skip",
-                    });
-                } else {
-                    // Register hash for intra-batch dedup of later rows
-                    batchHashes.set(hash, rowNumber);
-                }
-            }
-
-            // ── CHECK 14: CONFLICTING_DUPLICATE ──────────────────────────────
-            if (parsedDate) {
-                const dateStr = parsedDate.date.toISOString().split("T")[0];
-                let conflictFound = false;
-
-                for (let j = 0; j < rows.length; j++) {
-                    if (j === i) continue;
-                    const other = rows[j];
-                    const otherDate = parseDate(other.date);
-                    if (!otherDate) continue;
-
-                    const otherDateStr = otherDate.date.toISOString().split("T")[0];
-                    if (otherDateStr !== dateStr) continue;
-
-                    const descDist = levenshtein(
-                        (row.description || "").toLowerCase(),
-                        (other.description || "").toLowerCase()
-                    );
-                    if (descDist > 3) continue;
-
-                    // Same date + similar description — check for diverging amount/payer
-                    const otherAmountRaw = (other.amount || "").replace(/,/g, "");
-                    const otherAmount = parseFloat(otherAmountRaw);
-                    const differentAmount = Math.abs(parsedAmount - otherAmount) > 0.01;
-                    const differentPayer =
-                        (row.paid_by || "").trim().toLowerCase() !==
-                        (other.paid_by || "").trim().toLowerCase();
-
-                    if (differentAmount || differentPayer) {
-                        anomalies.push({
-                            type: "CONFLICTING_DUPLICATE",
-                            message:
-                                "Another row has the same date and similar description but different amount or payer.",
-                            detail: {
-                                conflictingRow: other,
-                                conflictingRowNumber: j + 2,
-                            },
-                            options: ["import_this", "import_other", "import_both", "skip_both"],
-                            defaultAction: "import_this",
-                        });
-                        conflictFound = true;
-                        break; // report only the first conflict
-                    }
-                }
-            }
-
-            // ── CHECK 15: PERCENTAGE_SUM_INVALID ─────────────────────────────
-            if (normalizedSplitType === "PERCENTAGE" && parsedSplitDetails.length > 0) {
-                const sum = parsedSplitDetails.reduce((acc, d) => acc + d.value, 0);
-                const roundedSum = Math.round(sum * 100) / 100;
-                if (roundedSum < 99.99 || roundedSum > 100.01) {
+                if (sum < 99.99 || sum > 100.01) {
                     anomalies.push({
                         type: "PERCENTAGE_SUM_INVALID",
-                        message: `Percentages sum to ${roundedSum}%, not 100%.`,
-                        detail: { sum: roundedSum, members: parsedSplitDetails },
+                        message: `Percentages sum to ${sum.toFixed(1)}%, not 100%.`,
+                        detail: { sum, splitDetails },
                         options: ["normalize_to_100", "skip"],
                         defaultAction: "normalize_to_100",
                     });
                 }
             }
 
-            // ── BUILD parsedData (best-guess resolved values) ─────────────────
-            const resolvedPayerId = resolvedPayer.found
-                ? resolvedPayer.found.id
-                : resolvedPayer.suggestion?.id || null;
+            // ─────────────────────────────────────────────────────────────────
+            // CHECK 18: DUPLICATE — EXACT (same date + description + amount + payer)
+            // ─────────────────────────────────────────────────────────────────
+            if (
+                parsedDateResult &&
+                (payerResolution.status === "RESOLVED" || payerResolution.status === "SUGGESTED") &&
+                !isNaN(parsedAmount)
+            ) {
+                const absAmount = Math.abs(parsedAmount);
+                const effectiveRate = rawCurrency === "USD" ? usdRate : 1;
+                const amountINR = Math.round(absAmount * effectiveRate * 100) / 100;
+                const payerId =
+                    payerResolution.status === "RESOLVED"
+                        ? payerResolution.resolved.id
+                        : payerResolution.suggestion.id;
 
-            const resolvedSplits = names
+                const hash = computeRowHash(
+                    parsedDateResult.date.toISOString().split("T")[0],
+                    row.description || "",
+                    amountINR,
+                    payerId
+                );
+
+                const inDB = existingHashSet.has(hash);
+                const inBatch = batchHashes.has(hash);
+
+                if (inDB || inBatch) {
+                    anomalies.push({
+                        type: "DUPLICATE_EXACT",
+                        message: "This expense already exists (same date, description, amount, payer).",
+                        detail: {
+                            existsInDB: inDB,
+                            existsInBatch: inBatch,
+                            conflictingRow: batchHashes.get(hash),
+                        },
+                        options: ["import_anyway", "skip"],
+                        defaultAction: "skip",
+                    });
+                } else {
+                    batchHashes.set(hash, rowNumber);
+                }
+            }
+
+            // ─────────────────────────────────────────────────────────────────
+            // CHECK 19: CONFLICTING DUPLICATE
+            // Same date + similar description + different amount or payer
+            // ─────────────────────────────────────────────────────────────────
+            if (parsedDateResult) {
+                const dateStr = parsedDateResult.date.toISOString().split("T")[0];
+                const desc = (row.description || "").toLowerCase().trim();
+
+                for (const prev of batchDescriptions) {
+                    if (prev.date !== dateStr) continue;
+                    const distance = levenshtein(desc, prev.description);
+                    if (
+                        distance <= 3 &&
+                        (prev.amount !== parsedAmount || prev.payer !== (row.paid_by || "").trim())
+                    ) {
+                        anomalies.push({
+                            type: "CONFLICTING_DUPLICATE",
+                            message:
+                                "Similar expense exists on the same date with different amount or payer.",
+                            detail: {
+                                thisRow: {
+                                    description: row.description,
+                                    amount: parsedAmount,
+                                    payer: row.paid_by,
+                                },
+                                conflictingRow: prev,
+                            },
+                            options: ["import_this", "import_both", "skip_both"],
+                            defaultAction: "import_this",
+                        });
+                        break; // report only the first conflict per row
+                    }
+                }
+
+                batchDescriptions.push({
+                    rowNumber,
+                    date: dateStr,
+                    description: desc,
+                    amount: parsedAmount,
+                    payer: (row.paid_by || "").trim(),
+                });
+            }
+
+            // ─────────────────────────────────────────────────────────────────
+            // CHECK 20: CONTRADICTORY SPLIT DATA — auto-resolve, just log
+            // EQUAL + split_details provided → split_details are meaningless
+            // ─────────────────────────────────────────────────────────────────
+            if (normalizedSplitType === "EQUAL" && splitDetails) {
+                autoNotes.push(
+                    "split_type is EQUAL but split_details were provided — split_details ignored"
+                );
+            }
+
+            // ── Build parsedData (best-guess resolved values for this row) ────
+            const resolvedPayerId =
+                payerResolution.status === "RESOLVED"
+                    ? payerResolution.resolved.id
+                    : payerResolution.status === "SUGGESTED"
+                    ? payerResolution.suggestion.id
+                    : unknownUser?.id || null;
+
+            const resolvedSplits = rawSplitNames
                 .map((name) => {
-                    const r = resolveMemberName(name, groupMembers);
-                    const member = r.found || r.suggestion;
+                    const r = resolveName(name, knownUsers);
+                    const member =
+                        r.status === "RESOLVED"
+                            ? r.resolved
+                            : r.status === "SUGGESTED"
+                            ? r.suggestion
+                            : null;
                     if (!member) return null;
-                    // Find matching split_detail value if present
-                    const detail = parsedSplitDetails.find(
-                        (d) => d.name.toLowerCase() === name.toLowerCase()
-                    );
-                    return {
-                        userId: member.id,
-                        value: detail ? detail.value : 0,
-                    };
+                    return { userId: member.id, value: 0 };
                 })
                 .filter(Boolean);
 
-            Object.assign(parsedData, {
-                date: parsedDate ? parsedDate.date : null,
-                description: row.description?.trim() || "",
-                amount: parsedAmount,
-                currency: row.currency?.toUpperCase() || "INR",
-                exchangeRate: row.currency?.toUpperCase() === "USD" ? usdRate : 1,
+            const parsedData = {
+                description: (row.description || "").trim(),
+                amount: Math.abs(isNaN(parsedAmount) ? 0 : parsedAmount),
+                currency: rawCurrency || "INR",
+                exchangeRate: rawCurrency === "USD" ? usdRate : 1,
                 paidById: resolvedPayerId,
+                date: parsedDateResult?.date?.toISOString().split("T")[0] || null,
                 splitType: normalizedSplitType || "EQUAL",
                 splits: resolvedSplits,
-                notes: row.notes || null,
-                isRefund: parsedAmount < 0,
-            });
+                splitDetails,
+                notes: row.notes || "",
+                isRefund: !isNaN(parsedAmount) && parsedAmount < 0,
+            };
 
-            // ── ROUTE ROW ─────────────────────────────────────────────────────
+            // ── Categorize row ─────────────────────────────────────────────────
             if (anomalies.length === 0) {
-                cleanRows.push({ rowNumber, parsedData, notes: [] });
+                cleanRows.push({ rowNumber, parsedData, autoNotes });
             } else {
-                flaggedRows.push({ rowNumber, rawData: row, parsedData, anomalies });
+                flaggedRows.push({ rowNumber, rawData: row, parsedData, anomalies, autoNotes });
             }
         }
 
-        // ── 6. Respond ────────────────────────────────────────────────────────
+        // ── Return preview response ───────────────────────────────────────────
         return res.status(200).json({
             sessionId: crypto.randomUUID(),
             totalRows: rows.length,
             cleanRows,
             flaggedRows,
+            nameResolution: {
+                autoResolved: Object.entries(nameResolutionMap)
+                    .filter(([, r]) => r.status === "RESOLVED" && r.note)
+                    .map(([raw, r]) => ({
+                        raw,
+                        resolvedTo: r.resolved.name,
+                        reason: r.note,
+                    })),
+                needsConfirmation: Object.entries(nameResolutionMap)
+                    .filter(([, r]) => r.status === "SUGGESTED")
+                    .map(([raw, r]) => ({
+                        raw,
+                        suggestion: r.suggestion,
+                        distance: r.distance,
+                    })),
+                unknown: Object.entries(nameResolutionMap)
+                    .filter(([, r]) => r.status === "UNKNOWN")
+                    .map(([raw]) => ({ raw })),
+                willBeCreatedAsGuest: namesToCreate,
+            },
+            memberLeftDateSuggestions,
+            usdRateUsed: usdRate,
         });
     } catch (err) {
         console.error("[POST /:groupId/preview]", err);
@@ -718,11 +819,28 @@ router.post("/:groupId/preview", upload.single("file"), async (req, res) => {
 
 // ─────────────────────────────────────────────────────────────────────────────
 // ROUTE 2: POST /api/import/:groupId/confirm
-// Processes user-resolved decisions and writes expenses / settlements to DB.
+//
+// Body: {
+//   sessionId: string,          // UUID returned by /preview
+//   decisions: [{
+//     rowNumber: number,
+//     action:   string,          // e.g. 'import', 'skip', 'import_as_settlement', …
+//     resolvedData: {
+//       description, amount, currency, exchangeRate,
+//       paidById, date, splitType,
+//       splits: [{ userId, value }],
+//       notes, isRefund
+//     }
+//   }]
+// }
+//
+// Processes each decision sequentially and writes to DB.
+// Returns a summary: { imported, importedAsSettlements, skipped, errored, errors }
 // ─────────────────────────────────────────────────────────────────────────────
 
 router.post("/:groupId/confirm", async (req, res) => {
     try {
+        const { groupId } = req.params;
         const { sessionId, decisions } = req.body;
 
         if (!sessionId || !Array.isArray(decisions)) {
@@ -737,9 +855,15 @@ router.post("/:groupId/confirm", async (req, res) => {
             skipped: 0,
             errored: 0,
             errors: [],
+            createdUsers: [],
         };
 
-        // Process decisions sequentially — order matters for idempotency
+        // Fetch unknownUser as a fallback payer when paidById is still null
+        const unknownUser = await prisma.user.findFirst({
+            where: { email: "unknown@splitmate.local" },
+        });
+
+        // ── Process decisions sequentially ────────────────────────────────────
         for (const decision of decisions) {
             const { rowNumber, action, resolvedData: data } = decision;
 
@@ -750,7 +874,7 @@ router.post("/:groupId/confirm", async (req, res) => {
                         data: {
                             sessionId,
                             rowNumber,
-                            rawData: JSON.stringify(data),
+                            rawData: JSON.stringify(data || {}),
                             anomalyType: "USER_SKIPPED",
                             actionTaken: "SKIP",
                             status: "SKIPPED",
@@ -770,7 +894,7 @@ router.post("/:groupId/confirm", async (req, res) => {
 
                     await prisma.settlement.create({
                         data: {
-                            groupId: req.params.groupId,
+                            groupId,
                             payerId: data.paidById,
                             payeeId: data.splits[0].userId,
                             amount: new Prisma.Decimal(Math.abs(Number(data.amount))),
@@ -794,18 +918,24 @@ router.post("/:groupId/confirm", async (req, res) => {
                 }
 
                 // ── DEFAULT: IMPORT AS EXPENSE ────────────────────────────────
-                // Covers: 'import', 'import_as_refund', 'import_this', 'import_both',
-                //         'import_anyway', 'use_suggestion', 'use_dd_mm', 'use_mm_dd',
-                //         'assume_inr', 'apply_rate', 'normalize_to_100', 'remove_inactive',
-                //         'remove_from_split', 'assign_to_<userId>', etc.
+                // Handles: 'import', 'import_as_refund', 'import_this', 'import_both',
+                //          'import_anyway', 'import_as_expense', 'use_suggestion',
+                //          'use_dd_mm', 'use_mm_dd', 'assume_inr', 'apply_rate',
+                //          'normalize_to_100', 'remove_inactive', 'remove_from_split',
+                //          'assign_to_<userId>', etc.
 
-                console.log(`[confirm] row ${rowNumber}: action=${action} paidById=${data?.paidById} date=${data?.date} splitType=${data?.splitType} splits=${JSON.stringify(data?.splits)}`);
+                console.log(
+                    `[confirm] row ${rowNumber}: action=${action} ` +
+                    `paidById=${data?.paidById} date=${data?.date} ` +
+                    `splitType=${data?.splitType} splits=${JSON.stringify(data?.splits)}`
+                );
 
-                // Guard: payer must be resolved — a null paidById violates the DB NOT NULL constraint
-                if (!data.paidById) {
+                // Guard: payer must be resolved
+                const paidById = data.paidById || unknownUser?.id;
+                if (!paidById) {
                     throw new Error(
-                        `Row ${rowNumber}: paidById is null. The payer name could not be matched to a group member. ` +
-                        `Check the 'paid_by' column value and ensure the user is a member of this group.`
+                        `Row ${rowNumber}: paidById is null. The payer name could not be matched ` +
+                        `to a group member. Check the 'paid_by' column and ensure the user is a member.`
                     );
                 }
 
@@ -815,73 +945,89 @@ router.post("/:groupId/confirm", async (req, res) => {
                 }
 
                 const exchangeRate = Number(data.exchangeRate) || 1;
-                const rawAmount = Math.abs(Number(data.amount)); // abs for refunds
-                const amountINR =
-                    Math.round(rawAmount * exchangeRate * 100) / 100;
+                const rawAmount = Math.abs(Number(data.amount));
+                const amountINR = Math.round(rawAmount * exchangeRate * 100) / 100;
+
+                const splitType = data.splitType || "EQUAL";
 
                 // Resolve splits input
                 let splitsInput = Array.isArray(data.splits) ? data.splits : [];
 
-                const splitType = data.splitType || "EQUAL";
-
                 if (splitType === "EQUAL") {
-                    // For EQUAL, use active members on the expense date (run inside tx later)
-                    splitsInput = null; // sentinel — resolved inside the transaction
+                    // Sentinel: resolved inside the transaction against active membership
+                    splitsInput = null;
                 } else {
-                    // For RATIO/PERCENTAGE/EXACT: if all values are 0 (name matching failed
-                    // during preview), fall back to EQUAL so the row isn't silently errored.
-                    const allZero = splitsInput.length > 0 && splitsInput.every((s) => s.value === 0);
+                    // If all split values are 0 (name matching failed), fall back to EQUAL
+                    const allZero =
+                        splitsInput.length > 0 &&
+                        splitsInput.every((s) => (s.value || 0) === 0);
                     if (allZero) {
-                        console.warn(`[confirm] row ${rowNumber}: all split values are 0 for ${splitType}, falling back to EQUAL`);
-                        splitsInput = null; // will resolve via getActiveMembersOnDate in tx
+                        console.warn(
+                            `[confirm] row ${rowNumber}: all split values are 0 for ${splitType}, falling back to EQUAL`
+                        );
+                        splitsInput = null;
                     }
                 }
 
                 // Compute dedup hash
-                const hash = computeRowHash(data.date, data.description, amountINR, data.paidById);
+                const hash = computeRowHash(data.date, data.description, amountINR, paidById);
 
-                // Persist expense + splits in a single transaction
+                // Currency enum guard
+                const currencyValue = ["INR", "USD", "EUR", "GBP"].includes(
+                    (data.currency || "").toUpperCase()
+                )
+                    ? data.currency.toUpperCase()
+                    : "INR";
+
+                // Persist expense + splits in one transaction
                 await prisma.$transaction(async (tx) => {
-                    // Resolve EQUAL (and fallback) splits inside the tx so the query
-                    // participates in the same connection lifecycle
                     let finalSplitsInput = splitsInput;
+
                     if (finalSplitsInput === null) {
+                        // Resolve active members on the expense date inside the tx
                         const activeMembers = await getActiveMembersOnDate(
-                            req.params.groupId,
+                            groupId,
                             new Date(data.date),
                             tx
                         );
                         if (activeMembers.length === 0) {
                             throw new Error(
                                 `Row ${rowNumber}: no active members found on ${data.date}. ` +
-                                `Check membership join/leave dates for group ${req.params.groupId}.`
+                                `Check membership join/leave dates for group ${groupId}.`
                             );
                         }
-                        finalSplitsInput = activeMembers.map((m) => ({ userId: m.userId, value: 0 }));
+                        finalSplitsInput = activeMembers.map((m) => ({
+                            userId: m.userId,
+                            value: 0,
+                        }));
                     }
 
-                    // Compute final split amounts
-                    const effectiveSplitType = splitsInput === null ? "EQUAL" : (data.splitType || "EQUAL");
-                    const finalSplits = calculateSplits(effectiveSplitType, amountINR, finalSplitsInput);
+                    const effectiveSplitType = splitsInput === null ? "EQUAL" : splitType;
+                    const finalSplits = calculateSplits(
+                        effectiveSplitType,
+                        amountINR,
+                        finalSplitsInput
+                    );
 
                     if (finalSplits.length === 0) {
-                        throw new Error(`Row ${rowNumber}: calculateSplits returned empty array for splitType=${effectiveSplitType}.`);
+                        throw new Error(
+                            `Row ${rowNumber}: calculateSplits returned empty array for splitType=${effectiveSplitType}.`
+                        );
                     }
+
                     const expense = await tx.expense.create({
                         data: {
-                            groupId: req.params.groupId,
+                            groupId,
                             description: String(data.description || "").trim(),
-                            amount: new Prisma.Decimal(rawAmount),
-                            currency: (["INR", "USD", "EUR", "GBP"].includes((data.currency || "").toUpperCase())
-                                ? data.currency.toUpperCase()
-                                : "INR"
-                            ),
+                            amount: new Prisma.Decimal(data.isRefund ? -rawAmount : rawAmount),
+                            currency: currencyValue,
                             exchangeRate: new Prisma.Decimal(exchangeRate),
-                            amountInr: new Prisma.Decimal(amountINR),
-                            paidById: data.paidById,
+                            amountInr: new Prisma.Decimal(data.isRefund ? -amountINR : amountINR),
+                            paidById,
                             date: new Date(data.date),
                             splitType: effectiveSplitType,
                             isRefund: data.isRefund || false,
+                            isSettlement: false,
                             notes: data.notes || null,
                             importedRowHash: hash,
                         },
@@ -910,7 +1056,7 @@ router.post("/:groupId/confirm", async (req, res) => {
             } catch (err) {
                 console.error(`[confirm] row ${rowNumber} failed:`, err.message);
 
-                // Best-effort log — don't let a log failure mask the real error
+                // Best-effort log — don't let a logging failure mask the real error
                 try {
                     await prisma.importLog.create({
                         data: {
@@ -923,7 +1069,10 @@ router.post("/:groupId/confirm", async (req, res) => {
                         },
                     });
                 } catch (logErr) {
-                    console.error(`[confirm] importLog write failed for row ${rowNumber}:`, logErr.message);
+                    console.error(
+                        `[confirm] importLog write failed for row ${rowNumber}:`,
+                        logErr.message
+                    );
                 }
 
                 results.errored++;
@@ -939,6 +1088,7 @@ router.post("/:groupId/confirm", async (req, res) => {
             skipped: results.skipped,
             errored: results.errored,
             errors: results.errors,
+            createdUsers: results.createdUsers,
             totalProcessed: decisions.length,
         });
     } catch (err) {
