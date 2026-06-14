@@ -55,7 +55,7 @@ export default function Signup() {
                     <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/20 backdrop-blur-sm">
                         <span className="text-xl">💸</span>
                     </div>
-                    <span className="text-xl font-bold text-white tracking-tight">Splitmate</span>
+                    <span className="text-xl font-bold text-white tracking-tight">Plitwire</span>
                 </div>
 
                 <div className="relative space-y-8">
@@ -64,7 +64,7 @@ export default function Signup() {
                             The smarter way<br />to split costs.
                         </h2>
                         <p className="mt-4 text-lg text-indigo-200 leading-relaxed max-w-sm">
-                            Create a group, add members, log expenses — Splitmate does the maths and tells everyone exactly what they owe.
+                            Create a group, add members, log expenses — Plitwire does the maths and tells everyone exactly what they owe.
                         </p>
                     </div>
 
@@ -98,10 +98,27 @@ export default function Signup() {
                 {/* Mobile logo */}
                 <div className="mb-8 flex items-center gap-2 lg:hidden">
                     <span className="text-2xl">💸</span>
-                    <span className="text-xl font-bold text-white">Splitmate</span>
+                    <span className="text-xl font-bold text-white">Plitwire</span>
                 </div>
 
                 <div className="w-full max-w-sm">
+                    {/* Demo nudge */}
+                    <Link
+                        to="/login"
+                        className="mb-6 flex items-center gap-3 rounded-xl border border-indigo-500/25 bg-indigo-500/8 px-4 py-3 transition hover:border-indigo-400/40 hover:bg-indigo-500/12 group"
+                    >
+                        <span className="text-xl">🚀</span>
+                        <div className="flex-1 min-w-0">
+                            <p className="text-sm font-semibold text-indigo-300">Just exploring?</p>
+                            <p className="text-xs text-gray-400 mt-0.5">
+                                Use a demo account — 43 expenses already loaded, no signup needed.
+                            </p>
+                        </div>
+                        <svg className="h-4 w-4 flex-shrink-0 text-indigo-400 transition group-hover:translate-x-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                        </svg>
+                    </Link>
+
                     <div className="mb-8">
                         <h1 className="text-2xl font-bold text-white">Create your account</h1>
                         <p className="mt-1 text-sm text-gray-400">Free forever. No credit card needed.</p>

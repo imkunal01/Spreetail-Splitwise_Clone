@@ -9,6 +9,7 @@ const prisma = require("../lib/prisma");
 const { requireAuth } = require("../middleware/auth");
 const { parse } = require("csv-parse/sync");
 const multer = require("multer");
+const bcrypt = require("bcryptjs");
 const {
     calculateSplits,
     validateSplits,
@@ -194,8 +195,8 @@ router.post("/:groupId/preview", upload.single("file"), async (req, res) => {
         // ── B + C + D. Parallel DB queries + USD rate fetch ───────────────────
         // IMPORTANT: use Promise.all so the Frankfurter HTTP call (slow from India)
         // does not block Supabase connections from being released promptly.
-        const [memberships, existingExpenses, usdRate] = await Promise.all([
-            // B. Group members with isGuest flag
+        const [memberships, allSystemUsers, existingExpenses, usdRate] = await Promise.all([
+            // B. Group members with isGuest flag (carry membership date context)
             prisma.groupMembership.findMany({
                 where: { groupId },
                 include: {
@@ -203,6 +204,10 @@ router.post("/:groupId/preview", upload.single("file"), async (req, res) => {
                         select: { id: true, name: true, email: true, isGuest: true },
                     },
                 },
+            }),
+            // B2. ALL system users — so names resolve even in fresh/empty groups
+            prisma.user.findMany({
+                select: { id: true, name: true, email: true, isGuest: true },
             }),
             // C. Existing import hashes for dedup
             prisma.expense.findMany({
@@ -213,8 +218,14 @@ router.post("/:groupId/preview", upload.single("file"), async (req, res) => {
             fetchUsdRate(),
         ]);
 
-        const knownUsers = memberships.map((m) => m.user);
-        const unknownUser = knownUsers.find((u) => u.email === "unknown@splitmate.local");
+        // Merge: group members first (they carry membership date context for
+        // inactive-member checks), then any additional system-wide users.
+        const groupMemberIds = new Set(memberships.map((m) => m.userId));
+        const knownUsers = [
+            ...memberships.map((m) => m.user),
+            ...allSystemUsers.filter((u) => !groupMemberIds.has(u.id)),
+        ];
+        const unknownUser = knownUsers.find((u) => u.email === "unknown@plitwire.local");
         const existingHashSet = new Set(existingExpenses.map((e) => e.importedRowHash));
 
         // ── E. Extract and resolve all names ──────────────────────────────────
@@ -230,7 +241,7 @@ router.post("/:groupId/preview", upload.single("file"), async (req, res) => {
             if (resolution.status === "UNKNOWN") {
                 namesToCreate.push({
                     raw,
-                    generatedEmail: `${raw.toLowerCase().replace(/[^a-z0-9]/g, "-")}-${crypto.randomBytes(3).toString("hex")}@splitmate.local`,
+                    generatedEmail: `${raw.toLowerCase().replace(/[^a-z0-9]/g, "-")}-${crypto.randomBytes(3).toString("hex")}@plitwire.local`,
                     inferredDates: inferMembershipDates(raw, rows),
                 });
             }
@@ -468,14 +479,14 @@ router.post("/:groupId/preview", upload.single("file"), async (req, res) => {
                     message: `No payer specified. (note: "${row.notes}")`,
                     detail: {
                         availableMembers: knownUsers
-                            .filter((u) => !u.isGuest || u.email === "unknown@splitmate.local")
+                            .filter((u) => !u.isGuest || u.email === "unknown@plitwire.local")
                             .map((u) => ({ id: u.id, name: u.name })),
                         unknownUserId: unknownUser?.id,
                     },
                     options: [
                         "assign_to_unknown",
                         ...knownUsers
-                            .filter((u) => u.email !== "unknown@splitmate.local")
+                            .filter((u) => u.email !== "unknown@plitwire.local")
                             .map((u) => `assign_to_${u.id}`),
                         "skip",
                     ],
@@ -766,6 +777,8 @@ router.post("/:groupId/preview", upload.single("file"), async (req, res) => {
                 currency: rawCurrency || "INR",
                 exchangeRate: rawCurrency === "USD" ? usdRate : 1,
                 paidById: resolvedPayerId,
+                paidByName: (row.paid_by || "").trim(),          // raw name for self-contained confirm
+                splitWithNames: rawSplitNames,                   // raw names for self-contained confirm
                 date: parsedDateResult?.date?.toISOString().split("T")[0] || null,
                 splitType: normalizedSplitType || "EQUAL",
                 splits: resolvedSplits,
@@ -860,11 +873,104 @@ router.post("/:groupId/confirm", async (req, res) => {
 
         // Fetch unknownUser as a fallback payer when paidById is still null
         const unknownUser = await prisma.user.findFirst({
-            where: { email: "unknown@splitmate.local" },
+            where: { email: "unknown@plitwire.local" },
         });
+
+        // ─────────────────────────────────────────────────────────────────────
+        // PHASE 1 — Collect all raw names + the dates they appear on
+        // across every non-skip decision so we can infer membership joinedAt.
+        // ─────────────────────────────────────────────────────────────────────
+        const nameDateMap = {};  // { lowerCaseName: [dateStrings] }
+        const rawNames = new Set();
+
+        for (const decision of decisions) {
+            if (decision.action === "skip" || decision.action === "skip_both") continue;
+            const d = decision.resolvedData;
+            if (!d) continue;
+
+            const dateStr = d.date || null;
+
+            // Collect payer name
+            if (d.paidByName) {
+                const key = d.paidByName.trim().toLowerCase();
+                if (key) {
+                    rawNames.add(d.paidByName.trim());
+                    if (!nameDateMap[key]) nameDateMap[key] = [];
+                    if (dateStr) nameDateMap[key].push(dateStr);
+                }
+            }
+
+            // Collect split member names
+            if (Array.isArray(d.splitWithNames)) {
+                for (const n of d.splitWithNames) {
+                    const key = n.trim().toLowerCase();
+                    if (!key) continue;
+                    rawNames.add(n.trim());
+                    if (!nameDateMap[key]) nameDateMap[key] = [];
+                    if (dateStr) nameDateMap[key].push(dateStr);
+                }
+            }
+        }
+
+        // ─────────────────────────────────────────────────────────────────────
+        // PHASE 2 — Resolve each name: find existing user OR create guest user,
+        // then ensure a group membership exists.
+        // ─────────────────────────────────────────────────────────────────────
+        const guestPasswordHash = await bcrypt.hash("guest-placeholder", 10);
+
+        for (const rawName of rawNames) {
+            const key = rawName.toLowerCase();
+
+            // Skip the "unknown" sentinel — it's handled by unknownUser
+            if (key === "unknown" || key === "unknown user") continue;
+
+            // 1. Find existing user system-wide (case-insensitive)
+            let user = await prisma.user.findFirst({
+                where: { name: { equals: rawName, mode: "insensitive" } },
+            });
+
+            // 2. If not found, create a new guest user
+            if (!user) {
+                const guestEmail = `${rawName.toLowerCase().replace(/[^a-z0-9]/g, "-")}-${crypto.randomBytes(3).toString("hex")}@plitwire.local`;
+                user = await prisma.user.create({
+                    data: {
+                        name: rawName,
+                        email: guestEmail,
+                        passwordHash: guestPasswordHash,
+                        isGuest: true,
+                    },
+                });
+                results.createdUsers.push({ name: user.name, id: user.id, email: user.email });
+                console.log(`[confirm] created guest user: ${user.name} (${user.email})`);
+            }
+
+            // 3. Upsert membership — skip if any row already exists for this user+group
+            const existingMembership = await prisma.groupMembership.findFirst({
+                where: { groupId, userId: user.id },
+            });
+
+            if (!existingMembership) {
+                // Infer joinedAt from the earliest date this name appears in decisions
+                const dates = (nameDateMap[key] || [])
+                    .map((ds) => new Date(ds))
+                    .filter((d) => !isNaN(d.getTime()))
+                    .sort((a, b) => a - b);
+                const joinedAt = dates.length > 0 ? dates[0] : new Date();
+
+                await prisma.groupMembership.create({
+                    data: { userId: user.id, groupId, joinedAt },
+                });
+                console.log(`[confirm] created membership for ${user.name} in group ${groupId} (joinedAt: ${joinedAt.toISOString().split("T")[0]})`);
+            }
+        }
+
+        // ─────────────────────────────────────────────────────────────────────
+        // PHASE 3 — Process decisions (memberships now guaranteed to exist)
+        // ─────────────────────────────────────────────────────────────────────
 
         // ── Process decisions sequentially ────────────────────────────────────
         for (const decision of decisions) {
+
             const { rowNumber, action, resolvedData: data } = decision;
 
             try {

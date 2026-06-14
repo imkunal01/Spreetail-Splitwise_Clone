@@ -14,8 +14,12 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      // Avoid redirect loops when already on the login page
-      if (window.location.pathname !== "/login") {
+      // Avoid redirect loops when already on login or signup pages.
+      // Also prevent redirecting during the initial session check (/api/auth/me).
+      const publicPaths = ["/login", "/signup"];
+      const isAuthMe = error.config?.url?.endsWith("/api/auth/me");
+
+      if (!publicPaths.includes(window.location.pathname) && !isAuthMe) {
         window.location.href = "/login";
       }
     }

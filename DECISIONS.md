@@ -1,6 +1,6 @@
 # DECISIONS.md — Engineering & Product Decision Log
 
-Every significant decision made during the build of Splitmate, the options considered, and the
+Every significant decision made during the build of Plitwire, the options considered, and the
 reasoning behind each choice.
 
 ---
@@ -370,5 +370,5 @@ function isActiveOnDate(membership, date) {
 }
 ```
 
-**Reason:** This is the core correctness requirement that makes Splitmate accurate rather than
+**Reason:** This is the core correctness requirement that makes Plitwire accurate rather than
 just a calculator. Sam's and Meera's requests both depend on this.

@@ -160,7 +160,7 @@ This ensures accurate historical accounting.
 
 ### Debt Simplification
 
-SplitMate minimizes the number of transactions required to settle debts.
+Plitwire minimizes the number of transactions required to settle debts.
 
 Example:
 
@@ -361,7 +361,7 @@ Settlements operate independently from expenses.
 ## Project Structure
 
 ```text
-splitmate/
+plitwire/
 │
 ├── client/
 │   ├── src/
@@ -397,7 +397,7 @@ splitmate/
 
 ```bash
 git clone <repository-url>
-cd splitmate
+cd plitwire
 ```
 
 ### Install Dependencies

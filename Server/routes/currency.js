@@ -7,7 +7,7 @@ const router = Router();
 const FRANKFURTER_BASE =
     (process.env.CURRENCY_API_URL || "https://api.frankfurter.dev").replace(/\/$/, "") + "/v2";
 
-// Currencies supported by Splitmate's schema (Currency enum)
+// Currencies supported by Plitwire's schema (Currency enum)
 const SUPPORTED = ["INR", "USD", "EUR", "GBP"];
 
 // ─── In-memory cache (avoids hammering Frankfurter on every CSV import row) ───
@@ -65,7 +65,7 @@ async function fetchRatesFromINR() {
 }
 
 // ─── GET /api/currency/rates ──────────────────────────────────────────────────
-// Returns latest exchange rates for all Splitmate-supported currencies (base=INR).
+// Returns latest exchange rates for all Plitwire-supported currencies (base=INR).
 // Cached for 1 hour.
 //
 // Response: { base: "INR", date: "YYYY-MM-DD", rates: { USD, EUR, GBP, INR } }

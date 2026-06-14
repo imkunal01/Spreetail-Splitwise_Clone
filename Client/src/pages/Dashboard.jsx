@@ -213,7 +213,7 @@ export default function Dashboard() {
                         <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-600/20 border border-indigo-500/30">
                             <span className="text-base">💸</span>
                         </div>
-                        <span className="text-base font-bold tracking-tight text-white">Splitmate</span>
+                        <span className="text-base font-bold tracking-tight text-white">Plitwire</span>
                     </div>
 
                     {/* Right side */}
