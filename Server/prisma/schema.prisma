@@ -65,6 +65,7 @@ model Group {
   memberships GroupMembership[]
   expenses    Expense[]
   settlements Settlement[]
+  importLogs  ImportLog[]
 
   @@map("groups")
 }
@@ -154,6 +155,7 @@ model Settlement {
 
 model ImportLog {
   id          String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  groupId     String?      @map("group_id") @db.Uuid
   sessionId   String       @map("session_id") @db.Uuid
   rowNumber   Int?         @map("row_number")
   rawData     String?      @map("raw_data") @db.Text
@@ -161,6 +163,8 @@ model ImportLog {
   actionTaken String?      @map("action_taken") @db.VarChar(50)
   status      ImportStatus
   createdAt   DateTime     @default(now()) @map("created_at")
+
+  group Group? @relation(fields: [groupId], references: [id], onDelete: Cascade)
 
   @@index([sessionId])
   @@map("import_logs")

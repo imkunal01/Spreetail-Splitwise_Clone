@@ -1,8 +1,8 @@
 -- ─────────────────────────────────────────────────────────────────────────────
--- Splitmate – Initial Schema Migration
+-- Splitwise – Initial Schema Migration
 -- File   : 001_initial.sql
 -- Purpose: Create all tables, types, constraints, indexes, and extensions
---          required to run Splitmate in production.
+--          required to run Splitwise in production.
 -- ─────────────────────────────────────────────────────────────────────────────
 
 -- Enable pgcrypto so gen_random_uuid() is available on PostgreSQL < 14.

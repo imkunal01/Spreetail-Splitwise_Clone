@@ -55,7 +55,7 @@ export default function Signup() {
                     <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/20 backdrop-blur-sm">
                         <span className="text-xl">💸</span>
                     </div>
-                    <span className="text-xl font-bold text-white tracking-tight">Plitwire</span>
+                    <span className="text-xl font-bold text-white tracking-tight">Splitwise</span>
                 </div>
 
                 <div className="relative space-y-8">
@@ -64,7 +64,7 @@ export default function Signup() {
                             The smarter way<br />to split costs.
                         </h2>
                         <p className="mt-4 text-lg text-indigo-200 leading-relaxed max-w-sm">
-                            Create a group, add members, log expenses — Plitwire does the maths and tells everyone exactly what they owe.
+                            Create a group, add members, log expenses — Splitwise does the maths and tells everyone exactly what they owe.
                         </p>
                     </div>
 
@@ -98,7 +98,7 @@ export default function Signup() {
                 {/* Mobile logo */}
                 <div className="mb-8 flex items-center gap-2 lg:hidden">
                     <span className="text-2xl">💸</span>
-                    <span className="text-xl font-bold text-white">Plitwire</span>
+                    <span className="text-xl font-bold text-white">Splitwise</span>
                 </div>
 
                 <div className="w-full max-w-sm">

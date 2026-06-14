@@ -972,6 +972,21 @@ export default function GroupDetail() {
         fetchGroup();
     }, [fetchGroup]);
 
+    async function handleDownloadImportReport() {
+        try {
+            const res = await api.get(`/api/import/${groupId}/report`, { responseType: 'blob' });
+            const url = window.URL.createObjectURL(new Blob([res.data]));
+            const link = document.createElement('a');
+            link.href = url;
+            link.setAttribute('download', `import_report_${groupId}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            link.parentNode.removeChild(link);
+        } catch (err) {
+            toast.error("Failed to download import report or no report available.");
+        }
+    }
+
     if (isLoading) {
         return (
             <div className="min-h-screen bg-gradient-to-br from-gray-950 via-gray-900 to-indigo-950 flex items-center justify-center">
@@ -1024,17 +1039,30 @@ export default function GroupDetail() {
                             <span className="text-xs text-gray-500">Created {formatDate(group.createdAt)}</span>
                         </div>
                     </div>
-                    <button
-                        id="import-csv-button"
-                        onClick={() => navigate(`/groups/${groupId}/import`)}
-                        className="flex shrink-0 items-center gap-2 self-start rounded-xl border border-indigo-500/40 bg-indigo-600/10 px-4 py-2.5 text-sm font-semibold text-indigo-300 transition hover:bg-indigo-600 hover:text-white hover:border-transparent focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                    >
-                        <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                                d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
-                        </svg>
-                        Import CSV
-                    </button>
+                    <div className="flex shrink-0 items-center gap-2 self-start">
+                        <button
+                            id="download-import-report-button"
+                            onClick={handleDownloadImportReport}
+                            className="flex items-center gap-2 rounded-xl border border-emerald-500/40 bg-emerald-600/10 px-4 py-2.5 text-sm font-semibold text-emerald-300 transition hover:bg-emerald-600 hover:text-white hover:border-transparent focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                        >
+                            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                                    d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                            </svg>
+                            Download Report
+                        </button>
+                        <button
+                            id="import-csv-button"
+                            onClick={() => navigate(`/groups/${groupId}/import`)}
+                            className="flex items-center gap-2 rounded-xl border border-indigo-500/40 bg-indigo-600/10 px-4 py-2.5 text-sm font-semibold text-indigo-300 transition hover:bg-indigo-600 hover:text-white hover:border-transparent focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        >
+                            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                                    d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
+                            </svg>
+                            Import CSV
+                        </button>
+                    </div>
                 </div>
             </div>
 

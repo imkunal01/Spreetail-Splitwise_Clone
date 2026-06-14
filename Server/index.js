@@ -106,6 +106,6 @@ app.use((err, _req, res, _next) => {
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
     logger.info(
-        `Splitwire server running in ${process.env.NODE_ENV || "development"} mode on port ${PORT}`
+        `Splitwise server running in ${process.env.NODE_ENV || "development"} mode on port ${PORT}`
     );
 });

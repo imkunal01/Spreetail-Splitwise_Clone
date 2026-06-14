@@ -160,7 +160,7 @@ This ensures accurate historical accounting.
 
 ### Debt Simplification
 
-Plitwire minimizes the number of transactions required to settle debts.
+Splitwise minimizes the number of transactions required to settle debts.
 
 Example:
 
@@ -361,7 +361,7 @@ Settlements operate independently from expenses.
 ## Project Structure
 
 ```text
-plitwire/
+splitwise/
 │
 ├── client/
 │   ├── src/
@@ -391,94 +391,76 @@ plitwire/
 
 ---
 
-## Installation
+## Setup Instructions
 
-### Clone Repository
+### Prerequisites
+* Node.js (v18 or higher)
+* PostgreSQL
+
+### 1. Clone Repository
 
 ```bash
 git clone <repository-url>
-cd plitwire
+cd splitwise
 ```
 
-### Install Dependencies
+### 2. Install Dependencies
 
-```bash
-npm install
-```
-
-Frontend:
-
-```bash
-cd client
-npm install
-```
-
-Backend:
-
+**Backend:**
 ```bash
 cd server
 npm install
 ```
 
----
+**Frontend:**
+```bash
+cd ../client
+npm install
+```
 
-## Environment Variables
+### 3. Environment Variables
 
-### Server
+Create a `.env` file in the `server` directory with the following variables:
 
 ```env
-DATABASE_URL=
-
-JWT_SECRET=
-
+DATABASE_URL="postgresql://postgres:password@localhost:5432/splitwise"
+JWT_SECRET="your_super_secret_jwt_key"
 PORT=5000
-
-CLIENT_URL=http://localhost:5173
+CLIENT_URL="http://localhost:5173"
 ```
 
----
+### 4. Database Setup (Prisma)
 
-## Prisma Setup
-
-Generate Prisma Client
+From the `server` directory, initialize the database:
 
 ```bash
+# Generate Prisma Client
 npx prisma generate
+
+# Push schema to database
+npx prisma db push
+
+# Optional: Seed the database with sample data
+node prisma/seed.js
 ```
 
-Run Migrations
+### 5. Running Locally
 
+You'll need two terminal windows to run both ends concurrently.
+
+**Terminal 1 (Backend):**
 ```bash
-npx prisma migrate dev
-```
-
-Open Prisma Studio
-
-```bash
-npx prisma studio
-```
-
----
-
-## Running Locally
-
-Backend
-
-```bash
-npm run server
-```
-
-Frontend
-
-```bash
-npm run client
-```
-
-Both
-
-```bash
+cd server
 npm run dev
 ```
+
+**Terminal 2 (Frontend):**
+```bash
+cd client
+npm run dev
+```
+
+The app will be available at `http://localhost:5173`.
 
 ---
 

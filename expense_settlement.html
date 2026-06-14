@@ -1,0 +1,211 @@
+
+<h2 class="sr-only">Expense settlement summary: 5 transactions clear all balances across Aisha, Dev, Rohan, Priya, Meera, and Sam.</h2>
+<style>
+  .avt{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:500;flex-shrink:0}
+  .avt-cr{background:#E1F5EE;color:#0F6E56}
+  .avt-db{background:#FAECE7;color:#993C1D}
+  .avt-ex{background:#EEF;color:#534AB7}
+  .pill{font-size:11px;padding:2px 8px;border-radius:20px;font-weight:500}
+  .pill-cr{background:#E1F5EE;color:#0F6E56}
+  .pill-db{background:#FAECE7;color:#993C1D}
+  .bal-cr{color:#0F6E56;font-weight:500}
+  .bal-db{color:#993C1D;font-weight:500}
+  .card{background:var(--color-background-primary);border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-lg);padding:1rem 1.25rem;margin-bottom:12px}
+  .txn-row{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:0.5px solid var(--color-border-tertiary)}
+  .txn-row:last-child{border-bottom:none}
+  .amt-badge{background:var(--color-background-secondary);border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-md);padding:4px 10px;font-size:13px;font-weight:500;white-space:nowrap}
+  .arrow{color:var(--color-text-secondary);font-size:18px}
+  .warn-list{list-style:none;padding:0;margin:0}
+  .warn-list li{font-size:12px;color:var(--color-text-secondary);padding:3px 0;border-bottom:0.5px solid var(--color-border-tertiary)}
+  .warn-list li:last-child{border-bottom:none}
+  .section-label{font-size:11px;color:var(--color-text-secondary);letter-spacing:.06em;text-transform:uppercase;margin:0 0 10px}
+  .bal-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}
+  .bal-card{background:var(--color-background-secondary);border-radius:var(--border-radius-md);padding:10px 12px;display:flex;align-items:center;gap:10px}
+  .bal-info{flex:1;min-width:0}
+  .bal-name{font-size:13px;font-weight:500;color:var(--color-text-primary)}
+  .bal-amt{font-size:12px;margin-top:2px}
+  .ext-row{display:flex;align-items:center;gap:10px;padding:8px 0}
+  details summary{cursor:pointer;font-size:13px;color:var(--color-text-secondary);list-style:none;display:flex;align-items:center;gap:6px}
+  details summary::-webkit-details-marker{display:none}
+</style>
+
+<div style="padding:1rem 0">
+
+  <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:16px">
+    <p style="font-size:18px;font-weight:500;margin:0;color:var(--color-text-primary)">Settlement summary</p>
+    <span style="font-size:12px;color:var(--color-text-secondary)">Feb – Apr 2026 &nbsp;·&nbsp; ₹85/$</span>
+  </div>
+
+  <p class="section-label">Net balances</p>
+  <div class="bal-grid">
+
+    <div class="bal-card">
+      <div class="avt avt-cr">AI</div>
+      <div class="bal-info">
+        <div class="bal-name">Aisha</div>
+        <div class="bal-amt bal-cr">+ ₹1,09,953.94</div>
+      </div>
+      <span class="pill pill-cr">gets back</span>
+    </div>
+
+    <div class="bal-card">
+      <div class="avt avt-cr">DV</div>
+      <div class="bal-info">
+        <div class="bal-name">Dev</div>
+        <div class="bal-amt bal-cr">+ ₹30,590.00</div>
+      </div>
+      <span class="pill pill-cr">gets back</span>
+    </div>
+
+    <div class="bal-card">
+      <div class="avt avt-db">PR</div>
+      <div class="bal-info">
+        <div class="bal-name">Priya</div>
+        <div class="bal-amt bal-db">– ₹60,916.06</div>
+      </div>
+      <span class="pill pill-db">owes</span>
+    </div>
+
+    <div class="bal-card">
+      <div class="avt avt-db">RO</div>
+      <div class="bal-info">
+        <div class="bal-name">Rohan</div>
+        <div class="bal-amt bal-db">– ₹58,829.06</div>
+      </div>
+      <span class="pill pill-db">owes</span>
+    </div>
+
+    <div class="bal-card">
+      <div class="avt avt-db">ME</div>
+      <div class="bal-info">
+        <div class="bal-name">Meera</div>
+        <div class="bal-amt bal-db">– ₹20,521.32</div>
+      </div>
+      <span class="pill pill-db">owes</span>
+    </div>
+
+    <div class="bal-card">
+      <div class="avt avt-db">SM</div>
+      <div class="bal-info">
+        <div class="bal-name">Sam</div>
+        <div class="bal-amt bal-db">– ₹277.50</div>
+      </div>
+      <span class="pill pill-db">owes</span>
+    </div>
+
+  </div>
+
+  <p class="section-label" style="margin-top:20px">5 transactions to settle everything</p>
+  <div class="card" style="padding:0.25rem 1.25rem">
+
+    <div class="txn-row">
+      <div class="avt avt-db">PR</div>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:13px;font-weight:500">Priya</div>
+      </div>
+      <i class="ti ti-arrow-right arrow" aria-hidden="true"></i>
+      <div class="amt-badge">₹60,916.06</div>
+      <i class="ti ti-arrow-right arrow" aria-hidden="true"></i>
+      <div style="flex:1;min-width:0;text-align:right">
+        <div style="font-size:13px;font-weight:500">Aisha</div>
+      </div>
+      <div class="avt avt-cr" style="margin-left:0">AI</div>
+    </div>
+
+    <div class="txn-row">
+      <div class="avt avt-db">RO</div>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:13px;font-weight:500">Rohan</div>
+      </div>
+      <i class="ti ti-arrow-right arrow" aria-hidden="true"></i>
+      <div class="amt-badge">₹49,037.88</div>
+      <i class="ti ti-arrow-right arrow" aria-hidden="true"></i>
+      <div style="flex:1;min-width:0;text-align:right">
+        <div style="font-size:13px;font-weight:500">Aisha</div>
+      </div>
+      <div class="avt avt-cr">AI</div>
+    </div>
+
+    <div class="txn-row">
+      <div class="avt avt-db">ME</div>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:13px;font-weight:500">Meera</div>
+      </div>
+      <i class="ti ti-arrow-right arrow" aria-hidden="true"></i>
+      <div class="amt-badge">₹20,521.32</div>
+      <i class="ti ti-arrow-right arrow" aria-hidden="true"></i>
+      <div style="flex:1;min-width:0;text-align:right">
+        <div style="font-size:13px;font-weight:500">Dev</div>
+      </div>
+      <div class="avt avt-cr">DV</div>
+    </div>
+
+    <div class="txn-row">
+      <div class="avt avt-db">RO</div>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:13px;font-weight:500">Rohan</div>
+      </div>
+      <i class="ti ti-arrow-right arrow" aria-hidden="true"></i>
+      <div class="amt-badge">₹9,791.18</div>
+      <i class="ti ti-arrow-right arrow" aria-hidden="true"></i>
+      <div style="flex:1;min-width:0;text-align:right">
+        <div style="font-size:13px;font-weight:500">Dev</div>
+      </div>
+      <div class="avt avt-cr">DV</div>
+    </div>
+
+    <div class="txn-row">
+      <div class="avt avt-db">SM</div>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:13px;font-weight:500">Sam</div>
+      </div>
+      <i class="ti ti-arrow-right arrow" aria-hidden="true"></i>
+      <div class="amt-badge">₹277.50</div>
+      <i class="ti ti-arrow-right arrow" aria-hidden="true"></i>
+      <div style="flex:1;min-width:0;text-align:right">
+        <div style="font-size:13px;font-weight:500">Dev</div>
+      </div>
+      <div class="avt avt-cr">DV</div>
+    </div>
+
+  </div>
+
+  <p class="section-label" style="margin-top:16px">External (outside household)</p>
+  <div class="card" style="padding:0.25rem 1.25rem">
+    <div class="ext-row">
+      <div class="avt avt-ex">KB</div>
+      <div style="flex:1;font-size:13px;font-weight:500">Kabir (Dev's friend)</div>
+      <i class="ti ti-arrow-right arrow" aria-hidden="true"></i>
+      <div class="amt-badge">₹2,550.00</div>
+      <i class="ti ti-arrow-right arrow" aria-hidden="true"></i>
+      <div style="font-size:13px;font-weight:500;margin-right:4px">Dev</div>
+      <div class="avt avt-cr">DV</div>
+    </div>
+    <p style="font-size:11px;color:var(--color-text-secondary);margin:4px 0 8px">His share of the Goa parasailing — Dev collects this directly.</p>
+  </div>
+
+  <details style="margin-top:16px">
+    <summary>
+      <i class="ti ti-alert-triangle" style="font-size:14px;color:var(--color-text-secondary)" aria-hidden="true"></i>
+      <span style="font-size:13px;color:var(--color-text-secondary)">11 data quality issues resolved</span>
+      <i class="ti ti-chevron-down" style="font-size:14px;color:var(--color-text-secondary);margin-left:auto" aria-hidden="true"></i>
+    </summary>
+    <div class="card" style="margin-top:8px">
+      <ul class="warn-list">
+        <li>Row 4 — duplicate Marina Bites (₹3,200 by Dev) removed</li>
+        <li>Row 11 — house cleaning ₹780: unknown payer → excluded</li>
+        <li>Row 12 — "Rohan paid Aisha back ₹5,000" is a settlement, not an expense → excluded</li>
+        <li>Row 13 &amp; 30 — percentages summed to 110%, normalised to 100%</li>
+        <li>Row 18, 19, 21, 24 — USD amounts converted at ₹85/$</li>
+        <li>Row 22 — Aisha's Thalassa entry skipped; Rohan's ₹2,450 used per the note</li>
+        <li>Row 25 — "rohan" (lowercase) normalised to Rohan</li>
+        <li>Row 26 — missing currency assumed INR</li>
+        <li>Row 29 — ₹0 Swiggy placeholder skipped</li>
+        <li>Row 32 — ambiguous date "04-05-2026" included as-is</li>
+        <li>Row 34 — Meera removed from April grocery split per note ("oops still in list")</li>
+        <li>Row 36 — Sam's ₹15,000 deposit to Aisha is a direct transfer → excluded</li>
+      </ul>
+    </div>
+  </details>
+
+</div>

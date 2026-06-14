@@ -8,8 +8,8 @@
 //   npm run seed -- --reset   — wipes expenses / memberships / group first, then re-seeds
 //
 // Login credentials (all passwords: password123)
-//   aisha@splitwire.com   rohan@splitwire.com   priya@splitwire.com
-//   meera@splitwire.com   dev@splitwire.com     sam@splitwire.com
+//   aisha@splitwise.com   rohan@splitwise.com   priya@splitwise.com
+//   meera@splitwise.com   dev@splitwise.com     sam@splitwise.com
 //
 // ─────────────────────────────────────────────────────────────────────────
 //
@@ -18,8 +18,8 @@
 //  1. CSV_PATH fixed: file is "Expenses_Export.csv" (underscore), not
 //     "Expenses Export.csv" (space) — original path never resolved, so the
 //     import silently no-op'd.
-//  2. USER_DEFS / login emails fixed to @splitwire.com to match the
-//     usage banner (was @splitmate.com, inconsistent).
+//  2. USER_DEFS / login emails fixed to @splitwise.com to match the
+//     usage banner (was @splitwise.com, inconsistent).
 //  3. USD_TO_INR corrected from 84 -> 85, matching the settlement summary
 //     header ("₹85/$") and the only rate that reconciles final balances.
 //  4. Duplicate-row detection: original hash (date|description|amount|payer)
@@ -122,13 +122,13 @@ const SHARED_PASSWORD = 'password123'
 const USD_TO_INR = 85
 
 const USER_DEFS = [
-    // FIX #2: emails standardised to @splitwire.com (matches login banner)
-    { name: 'Aisha', email: 'aisha@splitwire.com' },
-    { name: 'Rohan', email: 'rohan@splitwire.com' },
-    { name: 'Priya', email: 'priya@splitwire.com' },
-    { name: 'Meera', email: 'meera@splitwire.com' },
-    { name: 'Dev', email: 'dev@splitwire.com' },
-    { name: 'Sam', email: 'sam@splitwire.com' },
+    // FIX #2: emails standardised to @splitwise.com (matches login banner)
+    { name: 'Aisha', email: 'aisha@splitwise.com' },
+    { name: 'Rohan', email: 'rohan@splitwise.com' },
+    { name: 'Priya', email: 'priya@splitwise.com' },
+    { name: 'Meera', email: 'meera@splitwise.com' },
+    { name: 'Dev', email: 'dev@splitwise.com' },
+    { name: 'Sam', email: 'sam@splitwise.com' },
 ]
 
 // Membership windows inferred from the CSV
@@ -255,7 +255,7 @@ async function resetGroup(groupId) {
     await prisma.groupMembership.deleteMany({ where: { groupId } })
     await prisma.group.deleteMany({ where: { id: groupId } })
     await prisma.user.deleteMany({
-        where: { isGuest: true, NOT: { email: 'unknown@splitmate.local' } },
+        where: { isGuest: true, NOT: { email: 'unknown@splitwise.local' } },
     })
     ok('Group, memberships, expenses, and guest users wiped')
 }
@@ -266,7 +266,7 @@ async function main() {
     const doReset = process.argv.includes('--reset')
 
     hr()
-    console.log(chalk.bold('\n  🌱  SplitMate Seed Script\n'))
+    console.log(chalk.bold('\n  🌱  Splitwise Seed Script\n'))
     hr()
 
     // ── 0. Reset if requested ───────────────────────────────────────────────────
@@ -274,11 +274,11 @@ async function main() {
 
     // ── 1. Unknown User placeholder ─────────────────────────────────────────────
     await prisma.user.upsert({
-        where: { email: 'unknown@splitmate.local' },
+        where: { email: 'unknown@splitwise.local' },
         update: {},
         create: {
             name: 'Unknown User',
-            email: 'unknown@splitmate.local',
+            email: 'unknown@splitwise.local',
             passwordHash: await bcrypt.hash('placeholder', 10),
             isGuest: true,
         },
@@ -339,7 +339,7 @@ async function main() {
     })
 
     // Unknown User fallback
-    const unknownUser = await prisma.user.findFirst({ where: { email: 'unknown@splitmate.local' } })
+    const unknownUser = await prisma.user.findFirst({ where: { email: 'unknown@splitwise.local' } })
 
     // Build name → user lookup (case-insensitive + partial match + fuzzy)
     function resolveUser(rawName) {

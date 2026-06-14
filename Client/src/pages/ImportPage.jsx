@@ -435,16 +435,43 @@ function CleanRowsAccordion({ cleanRows }) {
 // ─────────────────────────────────────────────────────────────────────────────
 
 function ReviewStep({ previewData, onConfirm, onCancel }) {
-  const { sessionId, totalRows, cleanRows, flaggedRows } = previewData
+  const { sessionId, totalRows, cleanRows, flaggedRows, autoDecisions } = previewData
 
   // decisions: { [rowNumber]: { [anomalyIndex]: action } }
-  // Initialise with defaultActions for each anomaly
+  // Initialise with SEEDER default actions for each anomaly (matching server-side SEEDER_DEFAULT_ACTIONS)
+  const SEEDER_DEFAULTS_CLIENT = {
+    MISSING_REQUIRED_FIELD:   'skip',
+    INVALID_AMOUNT:           'skip',
+    MISSING_SPLIT_WITH:       'import',
+    ZERO_AMOUNT:              'skip',
+    NEGATIVE_AMOUNT:          'import_as_refund',
+    UNPARSEABLE_DATE:         'skip',
+    ASSUMED_DATE_YEAR:        'import',
+    AMBIGUOUS_DATE:           'use_dd_mm',
+    MISSING_CURRENCY:         'assume_inr',
+    USD_NO_EXCHANGE_RATE:     'apply_rate',
+    MISSING_PAYER:            'skip',
+    UNKNOWN_PAYER_SUGGESTION: 'use_suggestion',
+    UNKNOWN_PAYER:            'skip',
+    SETTLEMENT_AS_EXPENSE:    'import_as_settlement',
+    INACTIVE_MEMBER_IN_SPLIT: 'remove_inactive',
+    UNKNOWN_MEMBER_IN_SPLIT:  'remove_from_split',
+    INVALID_SPLIT_TYPE:       'skip',
+    PERCENTAGE_SUM_INVALID:   'normalize_to_100',
+    DUPLICATE_EXACT:          'skip',
+    CONFLICTING_DUPLICATE:    'skip',
+  }
+
   const [decisions, setDecisions] = useState(() => {
     const init = {}
     for (const row of flaggedRows) {
       init[row.rowNumber] = {}
       row.anomalies.forEach((a, ai) => {
-        init[row.rowNumber][ai] = a.defaultAction
+        // Pre-select the seeder default if it's a valid option, else fall back to anomaly's own defaultAction
+        const seederChoice = SEEDER_DEFAULTS_CLIENT[a.type]
+        init[row.rowNumber][ai] = (seederChoice && a.options.includes(seederChoice))
+          ? seederChoice
+          : a.defaultAction
       })
     }
     return init
@@ -519,6 +546,15 @@ function ReviewStep({ previewData, onConfirm, onCancel }) {
     await onConfirm(sessionId, decisionsArray)
   }
 
+  // ── Auto-import: send server-computed seeder decisions straight to confirm ──
+  async function handleAutoImport() {
+    if (!autoDecisions || autoDecisions.length === 0) {
+      toast?.error('Auto-decisions not available — use manual import.')
+      return
+    }
+    await onConfirm(sessionId, autoDecisions)
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-950 via-gray-900 to-indigo-950 pb-28">
       {/* ── Header ── */}
@@ -548,15 +584,40 @@ function ReviewStep({ previewData, onConfirm, onCancel }) {
       {/* ── Body ── */}
       <main className="mx-auto max-w-4xl px-4 py-6 sm:px-6 space-y-6">
 
+        {/* Auto-import banner */}
+        {autoDecisions && autoDecisions.length > 0 && (
+          <div className="rounded-xl bg-emerald-500/8 border border-emerald-500/25 px-4 py-4 flex items-start gap-3">
+            <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-emerald-500/20">
+              <svg className="h-4 w-4 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
+              </svg>
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold text-emerald-300">Auto-import with seeder defaults</p>
+              <p className="text-xs text-gray-400 mt-0.5 leading-relaxed">
+                Skips the review UI — applies the same smart defaults as the seeder script.
+                Settlements auto-detected, inactive members removed, bad rows skipped.
+              </p>
+            </div>
+            <button
+              id="import-auto-button"
+              onClick={handleAutoImport}
+              className="shrink-0 rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            >
+              Auto-import →
+            </button>
+          </div>
+        )}
+
         {/* Instruction banner */}
         <div className="rounded-xl bg-indigo-500/5 border border-indigo-500/20 px-4 py-3.5 flex items-start gap-3">
           <svg className="mt-0.5 h-4 w-4 shrink-0 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
           <div>
-            <p className="text-sm font-medium text-gray-200">Review before importing</p>
+            <p className="text-sm font-medium text-gray-200">Or review manually</p>
             <p className="text-xs text-gray-400 mt-0.5">
-              Rows with issues are listed below. Each has a pre-selected recommended action — change any you disagree with, then click <span className="font-medium text-white">Import</span> at the bottom. Clean rows will be imported automatically.
+              Flagged rows are pre-filled with seeder defaults. Change any you disagree with, then click <span className="font-medium text-white">Import</span>.
             </p>
           </div>
         </div>

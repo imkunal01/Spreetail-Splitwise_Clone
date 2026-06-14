@@ -5,9 +5,12 @@
   "main": "index.js",
   "scripts": {
     "seed": "node prisma/seed.js",
+    "wipe": "node prisma/wipe.js",
     "start": "node index.js",
     "dev": "nodemon index.js",
     "prisma:generate": "prisma generate --schema=prisma/schema.prisma --config=prisma.config.ts",
+    "prisma:migrate": "prisma migrate deploy --schema=prisma/schema.prisma --config=prisma.config.ts",
+    "db:reset": "prisma migrate reset --force --schema=prisma/schema.prisma --config=prisma.config.ts && npm run seed",
     "postinstall": "prisma generate --schema=prisma/schema.prisma --config=prisma.config.ts"
   },
   "author": "imkunal01",

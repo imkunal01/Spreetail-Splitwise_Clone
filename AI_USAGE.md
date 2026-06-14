@@ -39,7 +39,7 @@ JWT in httpOnly cookies, Axios with `withCredentials: true`.
 ### Prompt 2 — Database Schema (Prisma + SQL Migration)
 
 **What I asked:**
-> Generate `prisma/schema.prisma` and `server/migrations/001_initial.sql` for Plitwire.
+> Generate `prisma/schema.prisma` and `server/migrations/001_initial.sql` for Splitwise.
 > Both files must be fully consistent. Encode all 8 business scenarios as constraints and indexes.
 
 **Business scenarios encoded:** Membership over time, multi-currency, four split types,

@@ -1,6 +1,6 @@
 # DECISIONS.md — Engineering & Product Decision Log
 
-Every significant decision made during the build of Splitmate, the options considered, and the reasoning behind each choice.
+Every significant decision made during the build of Splitwise, the options considered, and the reasoning behind each choice.
 
 ---
 
@@ -393,4 +393,4 @@ The project was built around a few core principles:
 6. Let the user review dangerous import decisions.
 7. Use AI as a helper, not a replacement for review.
 
-These decisions shaped the final Splitmate architecture and explain why the implementation is structured the way it is.
+These decisions shaped the final Splitwise architecture and explain why the implementation is structured the way it is.

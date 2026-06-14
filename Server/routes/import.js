@@ -162,15 +162,155 @@ async function getActiveMembersOnDate(groupId, date, client) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// SEEDER DEFAULT ACTIONS
+//
+// Maps each anomaly type → the choice seed.js (the corrected seeder) would
+// make automatically.  Used to build the `autoDecisions` array returned by
+// /preview so callers can pass it straight to /confirm and get exactly the
+// same data as running the seeder script.
+// ─────────────────────────────────────────────────────────────────────────────
+
+const SEEDER_DEFAULT_ACTIONS = {
+    MISSING_REQUIRED_FIELD:   "skip",
+    INVALID_AMOUNT:           "skip",
+    MISSING_SPLIT_WITH:       "import",           // EQUAL split → active members on date
+    ZERO_AMOUNT:              "skip",
+    NEGATIVE_AMOUNT:          "import_as_refund",
+    UNPARSEABLE_DATE:         "skip",
+    ASSUMED_DATE_YEAR:        "import",            // assume current year
+    AMBIGUOUS_DATE:           "use_dd_mm",         // treat as DD-MM-YYYY
+    MISSING_CURRENCY:         "assume_inr",
+    USD_NO_EXCHANGE_RATE:     "apply_rate",
+    MISSING_PAYER:            "skip",              // seed.js FIX #5: exclude rows with no payer
+    UNKNOWN_PAYER_SUGGESTION: "use_suggestion",
+    UNKNOWN_PAYER:            "skip",              // seed.js: excludes unresolvable payers
+    SETTLEMENT_AS_EXPENSE:    "import_as_settlement",
+    INACTIVE_MEMBER_IN_SPLIT: "remove_inactive",
+    UNKNOWN_MEMBER_IN_SPLIT:  "remove_from_split",
+    INVALID_SPLIT_TYPE:       "skip",
+    PERCENTAGE_SUM_INVALID:   "normalize_to_100",
+    DUPLICATE_EXACT:          "skip",
+    CONFLICTING_DUPLICATE:    "skip",              // seed.js skips near-duplicate rows
+};
+
+// Descriptions containing these strings are EXCLUDED entirely by seed.js
+// (seed.js FIX #16: "deposit share" = direct transfer, skipped even as settlement).
+const SEEDER_EXCLUDE_PATTERNS = ["deposit share"];
+
+/**
+ * Given a row (clean or flagged) from the preview step, compute the decision
+ * that seed.js would make automatically and return
+ *   { rowNumber, action, resolvedData }
+ * ready to send straight to /confirm.
+ *
+ * @param {{ rowNumber, parsedData, anomalies?: array }} row
+ * @param {array} knownUsers  — the merged user list from the preview step
+ */
+function computeAutoDecision(row, knownUsers) {
+    const { rowNumber, parsedData, anomalies = [] } = row;
+
+    // ── Seeder hard-excludes certain description patterns ─────────────────────
+    const descLower = (parsedData.description || "").toLowerCase();
+    if (SEEDER_EXCLUDE_PATTERNS.some((p) => descLower.includes(p))) {
+        return { rowNumber, action: "skip", resolvedData: parsedData };
+    }
+
+    // ── Determine winning action ──────────────────────────────────────────────
+    // A single 'skip' anomaly overrides everything.
+    // Among non-skip actions: settlement > refund > import.
+    let shouldSkip = false;
+    let finalAction = "import";
+
+    for (const anomaly of anomalies) {
+        const seederAction = SEEDER_DEFAULT_ACTIONS[anomaly.type];
+        if (!seederAction) continue;
+        if (seederAction === "skip") { shouldSkip = true; break; }
+        if (seederAction === "import_as_settlement") finalAction = "import_as_settlement";
+        else if (seederAction === "import_as_refund" && finalAction !== "import_as_settlement") finalAction = "import_as_refund";
+        // all other non-skip actions leave the base action as "import"
+    }
+
+    if (shouldSkip) return { rowNumber, action: "skip", resolvedData: parsedData };
+
+    // ── Patch resolvedData per-anomaly ────────────────────────────────────────
+    let resolvedData = { ...parsedData };
+
+    for (const anomaly of anomalies) {
+        switch (anomaly.type) {
+
+            case "MISSING_CURRENCY":
+                // assume_inr → override currency + rate
+                resolvedData = { ...resolvedData, currency: "INR", exchangeRate: 1 };
+                break;
+
+            case "NEGATIVE_AMOUNT":
+                // import_as_refund → mark as refund
+                resolvedData = { ...resolvedData, isRefund: true };
+                break;
+
+            case "UNKNOWN_PAYER_SUGGESTION":
+                // use_suggestion → accept the fuzzy-match suggestion as payer
+                if (anomaly.detail?.suggestion?.id) {
+                    resolvedData = { ...resolvedData, paidById: anomaly.detail.suggestion.id };
+                }
+                break;
+
+            case "INACTIVE_MEMBER_IN_SPLIT": {
+                // For settlements the split member IS the payee — never strip them.
+                if (finalAction === "import_as_settlement") break;
+
+                // remove_inactive → drop members whose membership had ended
+                const inactiveNames = new Set(anomaly.detail?.inactiveMembers || []);
+                const inactiveIds = new Set(
+                    [...inactiveNames]
+                        .map((name) => knownUsers.find((u) => u.name === name)?.id)
+                        .filter(Boolean)
+                );
+                resolvedData = {
+                    ...resolvedData,
+                    splits: resolvedData.splits.filter((s) => !inactiveIds.has(s.userId)),
+                    splitWithNames: resolvedData.splitWithNames.filter((n) => !inactiveNames.has(n)),
+                };
+                break;
+            }
+
+            case "UNKNOWN_MEMBER_IN_SPLIT": {
+                // For settlements the split member IS the payee — never strip them.
+                if (finalAction === "import_as_settlement") break;
+
+                // remove_from_split → drop unresolvable names from splitWithNames
+                // (splits already only has resolved users so no change needed there)
+                const unknownRaw = new Set((anomaly.detail?.unknownMembers || []).map((u) => u.raw));
+                resolvedData = {
+                    ...resolvedData,
+                    splitWithNames: resolvedData.splitWithNames.filter((n) => !unknownRaw.has(n)),
+                };
+                break;
+            }
+
+            // AMBIGUOUS_DATE / ASSUMED_DATE_YEAR / USD_NO_EXCHANGE_RATE:
+            // parsedData already has the correct values (DD-MM interp, assumed
+            // year, usdRate applied) — no additional patch needed.
+            default:
+                break;
+        }
+    }
+
+    return { rowNumber, action: finalAction, resolvedData };
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // ROUTE 1: POST /api/import/:groupId/preview
 //
 // Accepts a multipart CSV upload, runs 20 anomaly checks on each row,
 // and returns:
-//   - cleanRows:   rows with no anomalies (ready to confirm as-is)
-//   - flaggedRows: rows with one or more anomalies (require user decisions)
+//   - cleanRows:      rows with no anomalies (ready to confirm as-is)
+//   - flaggedRows:    rows with one or more anomalies (require user decisions)
+//   - autoDecisions:  pre-built decisions using seeder-like defaults for ALL
+//                     rows — pass directly to /confirm for zero-interaction import
 //   - nameResolution: summary of auto-resolved / needs-confirmation / unknown names
 //   - memberLeftDateSuggestions: existing members who may have left
-//   - usdRateUsed: the exchange rate that was applied for USD detection
+//   - usdRateUsed:    the exchange rate that was applied for USD detection
 // ─────────────────────────────────────────────────────────────────────────────
 
 router.post("/:groupId/preview", upload.single("file"), async (req, res) => {
@@ -225,7 +365,7 @@ router.post("/:groupId/preview", upload.single("file"), async (req, res) => {
             ...memberships.map((m) => m.user),
             ...allSystemUsers.filter((u) => !groupMemberIds.has(u.id)),
         ];
-        const unknownUser = knownUsers.find((u) => u.email === "unknown@plitwire.local");
+        const unknownUser = knownUsers.find((u) => u.email === "unknown@splitwise.local");
         const existingHashSet = new Set(existingExpenses.map((e) => e.importedRowHash));
 
         // ── E. Extract and resolve all names ──────────────────────────────────
@@ -241,7 +381,7 @@ router.post("/:groupId/preview", upload.single("file"), async (req, res) => {
             if (resolution.status === "UNKNOWN") {
                 namesToCreate.push({
                     raw,
-                    generatedEmail: `${raw.toLowerCase().replace(/[^a-z0-9]/g, "-")}-${crypto.randomBytes(3).toString("hex")}@plitwire.local`,
+                    generatedEmail: `${raw.toLowerCase().replace(/[^a-z0-9]/g, "-")}-${crypto.randomBytes(3).toString("hex")}@splitwise.local`,
                     inferredDates: inferMembershipDates(raw, rows),
                 });
             }
@@ -479,14 +619,14 @@ router.post("/:groupId/preview", upload.single("file"), async (req, res) => {
                     message: `No payer specified. (note: "${row.notes}")`,
                     detail: {
                         availableMembers: knownUsers
-                            .filter((u) => !u.isGuest || u.email === "unknown@plitwire.local")
+                            .filter((u) => !u.isGuest || u.email === "unknown@splitwise.local")
                             .map((u) => ({ id: u.id, name: u.name })),
                         unknownUserId: unknownUser?.id,
                     },
                     options: [
                         "assign_to_unknown",
                         ...knownUsers
-                            .filter((u) => u.email !== "unknown@plitwire.local")
+                            .filter((u) => u.email !== "unknown@splitwise.local")
                             .map((u) => `assign_to_${u.id}`),
                         "skip",
                     ],
@@ -795,12 +935,27 @@ router.post("/:groupId/preview", upload.single("file"), async (req, res) => {
             }
         }
 
+        // ── Build autoDecisions — seeder-like defaults for ALL rows ──────────
+        // Clean rows are always 'import'; flagged rows use computeAutoDecision().
+        const autoDecisions = [
+            ...cleanRows.map((row) => ({
+                rowNumber: row.rowNumber,
+                action: "import",
+                resolvedData: row.parsedData,
+            })),
+            ...flaggedRows.map((row) => computeAutoDecision(row, knownUsers)),
+        ];
+
+        // Sort by rowNumber so /confirm receives them in CSV order
+        autoDecisions.sort((a, b) => a.rowNumber - b.rowNumber);
+
         // ── Return preview response ───────────────────────────────────────────
         return res.status(200).json({
             sessionId: crypto.randomUUID(),
             totalRows: rows.length,
             cleanRows,
             flaggedRows,
+            autoDecisions,
             nameResolution: {
                 autoResolved: Object.entries(nameResolutionMap)
                     .filter(([, r]) => r.status === "RESOLVED" && r.note)
@@ -873,7 +1028,7 @@ router.post("/:groupId/confirm", async (req, res) => {
 
         // Fetch unknownUser as a fallback payer when paidById is still null
         const unknownUser = await prisma.user.findFirst({
-            where: { email: "unknown@plitwire.local" },
+            where: { email: "unknown@splitwise.local" },
         });
 
         // ─────────────────────────────────────────────────────────────────────
@@ -882,6 +1037,10 @@ router.post("/:groupId/confirm", async (req, res) => {
         // ─────────────────────────────────────────────────────────────────────
         const nameDateMap = {};  // { lowerCaseName: [dateStrings] }
         const rawNames = new Set();
+        // Maps alias name (lower) → already-resolved userId.
+        // Populated when paidById is set alongside paidByName so Phase 2 can
+        // use the real user record instead of creating a ghost for the alias.
+        const resolvedPayerMap = {};  // { lowerCaseName: userId }
 
         for (const decision of decisions) {
             if (decision.action === "skip" || decision.action === "skip_both") continue;
@@ -891,12 +1050,20 @@ router.post("/:groupId/confirm", async (req, res) => {
             const dateStr = d.date || null;
 
             // Collect payer name
+            // Always collect paidByName for membership-date tracking.
+            // When paidById is already resolved (e.g. via UNKNOWN_PAYER_SUGGESTION
+            // → use_suggestion), we record the alias → resolvedId mapping so
+            // Phase 2 can use the real user instead of creating a ghost.
             if (d.paidByName) {
                 const key = d.paidByName.trim().toLowerCase();
                 if (key) {
                     rawNames.add(d.paidByName.trim());
                     if (!nameDateMap[key]) nameDateMap[key] = [];
                     if (dateStr) nameDateMap[key].push(dateStr);
+                    // Track alias → resolved user ID so Phase 2 skips ghost creation
+                    if (d.paidById) {
+                        resolvedPayerMap[key] = d.paidById;
+                    }
                 }
             }
 
@@ -924,14 +1091,24 @@ router.post("/:groupId/confirm", async (req, res) => {
             // Skip the "unknown" sentinel — it's handled by unknownUser
             if (key === "unknown" || key === "unknown user") continue;
 
-            // 1. Find existing user system-wide (case-insensitive)
-            let user = await prisma.user.findFirst({
-                where: { name: { equals: rawName, mode: "insensitive" } },
-            });
+            // 1a. If this name is an alias for an already-resolved user (e.g. "Priya S"
+            //     was resolved to Priya via UNKNOWN_PAYER_SUGGESTION), fetch by ID.
+            //     This avoids spawning a ghost user for the alias.
+            let user = null;
+            if (resolvedPayerMap[key]) {
+                user = await prisma.user.findUnique({ where: { id: resolvedPayerMap[key] } });
+            }
+
+            // 1b. Fall back to case-insensitive name search
+            if (!user) {
+                user = await prisma.user.findFirst({
+                    where: { name: { equals: rawName, mode: "insensitive" } },
+                });
+            }
 
             // 2. If not found, create a new guest user
             if (!user) {
-                const guestEmail = `${rawName.toLowerCase().replace(/[^a-z0-9]/g, "-")}-${crypto.randomBytes(3).toString("hex")}@plitwire.local`;
+                const guestEmail = `${rawName.toLowerCase().replace(/[^a-z0-9]/g, "-")}-${crypto.randomBytes(3).toString("hex")}@splitwise.local`;
                 user = await prisma.user.create({
                     data: {
                         name: rawName,
@@ -978,6 +1155,7 @@ router.post("/:groupId/confirm", async (req, res) => {
                 if (action === "skip" || action === "skip_both") {
                     await prisma.importLog.create({
                         data: {
+                            groupId,
                             sessionId,
                             rowNumber,
                             rawData: JSON.stringify(data || {}),
@@ -992,18 +1170,58 @@ router.post("/:groupId/confirm", async (req, res) => {
 
                 // ── IMPORT AS SETTLEMENT ───────────────────────────────────────
                 if (action === "import_as_settlement") {
-                    if (!data.splits || data.splits.length === 0) {
+                    // ── Resolve payee: prefer splits[0], fall back to splitWithNames ──
+                    // When the preview couldn't resolve a split member into splits[]
+                    // (e.g. settlement row with unresolved payee name), we look up
+                    // the first splitWithNames entry directly — matches seeder behaviour
+                    // of using split_with[0] as the payee.
+                    let settlementPayeeId = data.splits?.[0]?.userId || null;
+
+                    if (!settlementPayeeId && Array.isArray(data.splitWithNames) && data.splitWithNames.length > 0) {
+                        const payeeName = data.splitWithNames[0];
+                        const payeeUser = await prisma.user.findFirst({
+                            where: { name: { equals: payeeName, mode: "insensitive" } },
+                        });
+                        settlementPayeeId = payeeUser?.id || null;
+                    }
+
+                    if (!settlementPayeeId) {
                         throw new Error(
-                            "import_as_settlement requires at least one entry in splits (the payee)."
+                            `Row ${rowNumber}: import_as_settlement — could not resolve a payee from splits or splitWithNames.`
                         );
                     }
+
+                    const settlementPayerId   = data.paidById;
+
+                    // ── Guard: payer must be a real (non-unknown) user ─────────
+                    // Matches seeder: `payer.id !== unknownUser.id`
+                    if (!settlementPayerId || settlementPayerId === unknownUser?.id) {
+                        throw new Error(
+                            `Row ${rowNumber}: settlement skipped — payer is unknown/unresolved.`
+                        );
+                    }
+
+                    // ── Guard: payer and payee must be different people ─────────
+                    // Matches seeder: `payer.id !== payee.id`
+                    if (settlementPayerId === settlementPayeeId) {
+                        throw new Error(
+                            `Row ${rowNumber}: settlement skipped — payer and payee are the same person.`
+                        );
+                    }
+
+                    // ── Use INR-converted amount (matches seeder amountINR) ─────
+                    // Seeder multiplies by exRate before storing; raw data.amount
+                    // is in the original currency, so apply exchangeRate here too.
+                    const settlementExRate = Number(data.exchangeRate) || 1;
+                    const settlementAmountINR =
+                        Math.round(Math.abs(Number(data.amount)) * settlementExRate * 100) / 100;
 
                     await prisma.settlement.create({
                         data: {
                             groupId,
-                            payerId: data.paidById,
-                            payeeId: data.splits[0].userId,
-                            amount: new Prisma.Decimal(Math.abs(Number(data.amount))),
+                            payerId: settlementPayerId,
+                            payeeId: settlementPayeeId,
+                            amount: new Prisma.Decimal(settlementAmountINR),
                             date: new Date(data.date),
                             notes: data.notes || null,
                         },
@@ -1011,6 +1229,7 @@ router.post("/:groupId/confirm", async (req, res) => {
 
                     await prisma.importLog.create({
                         data: {
+                            groupId,
                             sessionId,
                             rowNumber,
                             rawData: JSON.stringify(data),
@@ -1056,20 +1275,78 @@ router.post("/:groupId/confirm", async (req, res) => {
 
                 const splitType = data.splitType || "EQUAL";
 
-                // Resolve splits input
+                // Resolve splits input — parse splitDetails into actual values
+                // for EXACT / PERCENTAGE / RATIO when the preview left them as 0.
                 let splitsInput = Array.isArray(data.splits) ? data.splits : [];
 
                 if (splitType === "EQUAL") {
                     // Sentinel: resolved inside the transaction against active membership
                     splitsInput = null;
                 } else {
-                    // If all split values are 0 (name matching failed), fall back to EQUAL
+                    // Check if all split values are zero (preview placeholder)
                     const allZero =
                         splitsInput.length > 0 &&
                         splitsInput.every((s) => (s.value || 0) === 0);
-                    if (allZero) {
+
+                    if (allZero && data.splitDetails) {
+                        // ── Parse splitDetails into numeric values ──────────────
+                        // Builds a userId → value map from the raw split_details string.
+                        // Supports: "Rohan 700; Priya 400" (EXACT)
+                        //           "Aisha 30%; Rohan 30%" (PERCENTAGE, % stripped)
+                        //           "Rohan 2; Priya 1; Dev 2" (RATIO)
+                        //
+                        // We resolve each name against the system-wide users list so
+                        // we can match back to the userIds stored in splits[].userId.
+                        const detailEntries = data.splitDetails
+                            .split(";")
+                            .map((s) => s.trim())
+                            .filter(Boolean);
+
+                        // Build a system-wide name → userId cache for this row
+                        const allUsersForRow = await prisma.user.findMany({
+                            where: { id: { in: splitsInput.map((s) => s.userId) } },
+                            select: { id: true, name: true },
+                        });
+                        const nameToId = {};
+                        for (const u of allUsersForRow) {
+                            nameToId[u.name.toLowerCase()] = u.id;
+                        }
+
+                        const valueMap = {}; // userId → numeric value
+                        for (const entry of detailEntries) {
+                            // Match patterns like: "Rohan 700", "Rohan 30%", "Rohan 2"
+                            const m = entry.match(/^(.+?)\s+([\d.]+)%?\s*$/);
+                            if (!m) continue;
+                            const entryName = m[1].trim().toLowerCase();
+                            const entryValue = parseFloat(m[2]);
+                            if (isNaN(entryValue)) continue;
+
+                            // Find the userId for this name (exact or case-insensitive)
+                            const uid = nameToId[entryName];
+                            if (uid) valueMap[uid] = entryValue;
+                        }
+
+                        // Apply parsed values to the splits array
+                        const patchedSplits = splitsInput
+                            .map((s) => ({
+                                userId: s.userId,
+                                value: valueMap[s.userId] ?? 0,
+                            }))
+                            .filter((s) => s.value > 0); // keep only members with a value
+
+                        if (patchedSplits.length > 0 && patchedSplits.every((s) => s.value > 0)) {
+                            splitsInput = patchedSplits;
+                        } else {
+                            // Could not parse details — fall back to EQUAL
+                            console.warn(
+                                `[confirm] row ${rowNumber}: could not parse splitDetails for ${splitType}, falling back to EQUAL`
+                            );
+                            splitsInput = null;
+                        }
+                    } else if (allZero) {
+                        // No splitDetails available — fall back to EQUAL
                         console.warn(
-                            `[confirm] row ${rowNumber}: all split values are 0 for ${splitType}, falling back to EQUAL`
+                            `[confirm] row ${rowNumber}: all split values are 0 for ${splitType} and no splitDetails, falling back to EQUAL`
                         );
                         splitsInput = null;
                     }
@@ -1150,6 +1427,7 @@ router.post("/:groupId/confirm", async (req, res) => {
 
                 await prisma.importLog.create({
                     data: {
+                        groupId,
                         sessionId,
                         rowNumber,
                         rawData: JSON.stringify(data),
@@ -1166,6 +1444,7 @@ router.post("/:groupId/confirm", async (req, res) => {
                 try {
                     await prisma.importLog.create({
                         data: {
+                            groupId,
                             sessionId,
                             rowNumber,
                             rawData: JSON.stringify(data || {}),
@@ -1199,6 +1478,52 @@ router.post("/:groupId/confirm", async (req, res) => {
         });
     } catch (err) {
         console.error("[POST /:groupId/confirm]", err);
+        return res.status(500).json({ error: err.message || "Internal server error" });
+    }
+});
+// ─────────────────────────────────────────────────────────────────────────────
+// ROUTE 3: GET /api/import/:groupId/report
+//
+// Generates and returns a CSV report of the import logs for the current group.
+// ─────────────────────────────────────────────────────────────────────────────
+
+router.get("/:groupId/report", async (req, res) => {
+    try {
+        const { groupId } = req.params;
+
+        // Fetch logs for this group
+        const logs = await prisma.importLog.findMany({
+            where: { groupId },
+            orderBy: { createdAt: "desc" },
+        });
+
+        if (!logs || logs.length === 0) {
+            return res.status(404).json({ error: "No import logs found for this group." });
+        }
+
+        // Generate CSV
+        const headers = ["ID", "Session ID", "Row Number", "Anomaly Type", "Action Taken", "Status", "Created At", "Raw Data"];
+        const rows = logs.map(log => [
+            log.id,
+            log.sessionId,
+            log.rowNumber !== null ? log.rowNumber : "",
+            log.anomalyType || "",
+            log.actionTaken || "",
+            log.status,
+            log.createdAt.toISOString(),
+            log.rawData ? log.rawData.replace(/"/g, '""') : "" // Escape quotes in JSON
+        ]);
+
+        const csvContent = [
+            headers.join(","),
+            ...rows.map(row => row.map(v => `"${v}"`).join(","))
+        ].join("\n");
+
+        res.setHeader("Content-Type", "text/csv");
+        res.setHeader("Content-Disposition", `attachment; filename="import_report_${groupId}.csv"`);
+        return res.status(200).send(csvContent);
+    } catch (err) {
+        console.error("[GET /:groupId/report]", err);
         return res.status(500).json({ error: err.message || "Internal server error" });
     }
 });

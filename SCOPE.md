@@ -1,4 +1,4 @@
-# SCOPE.md — Plitwire Data Anomaly Log & Database Schema
+# SCOPE.md — Splitwise Data Anomaly Log & Database Schema
 
 ---
 

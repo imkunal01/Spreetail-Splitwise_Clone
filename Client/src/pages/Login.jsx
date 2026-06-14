@@ -4,12 +4,12 @@ import { AuthContext } from "../context/AuthContext";
 
 // Seeded demo accounts — mirrors Server/prisma/seed.js
 const DEMO_USERS = [
-    { name: "Aisha", email: "aisha@splitwire.com", emoji: "👩🏽", role: "Group creator", highlight: true },
-    { name: "Rohan", email: "rohan@splitwire.com", emoji: "👨🏽", role: "Flatmate" },
-    { name: "Priya", email: "priya@splitwire.com", emoji: "👩🏽‍💼", role: "Flatmate" },
-    { name: "Meera", email: "meera@splitwire.com", emoji: "👩🏾", role: "Moved out Mar '26" },
-    { name: "Dev", email: "dev@splitwire.com", emoji: "🧑🏽", role: "Goa trip guest" },
-    { name: "Sam", email: "sam@splitwire.com", emoji: "👨🏻", role: "New flatmate Apr '26" },
+    { name: "Aisha", email: "aisha@splitwise.com", emoji: "👩🏽", role: "Group creator", highlight: true },
+    { name: "Rohan", email: "rohan@splitwise.com", emoji: "👨🏽", role: "Flatmate" },
+    { name: "Priya", email: "priya@splitwise.com", emoji: "👩🏽‍💼", role: "Flatmate" },
+    { name: "Meera", email: "meera@splitwise.com", emoji: "👩🏾", role: "Moved out Mar '26" },
+    { name: "Dev", email: "dev@splitwise.com", emoji: "🧑🏽", role: "Goa trip guest" },
+    { name: "Sam", email: "sam@splitwise.com", emoji: "👨🏻", role: "New flatmate Apr '26" },
 ];
 const DEMO_PASSWORD = "password123";
 
@@ -66,7 +66,7 @@ export default function Login() {
                     <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/20 backdrop-blur-sm">
                         <span className="text-xl">💸</span>
                     </div>
-                    <span className="text-xl font-bold text-white tracking-tight">Splitwire</span>
+                    <span className="text-xl font-bold text-white tracking-tight">splitwise</span>
                 </div>
 
                 <div className="relative space-y-6">
@@ -90,7 +90,7 @@ export default function Login() {
 
                 <div className="relative rounded-2xl bg-white/10 backdrop-blur-sm border border-white/20 p-5">
                     <p className="text-sm text-indigo-100 leading-relaxed">
-                        "Finally stopped using WhatsApp threads to track who paid what. Splitwire handles everything automatically."
+                        "Finally stopped using WhatsApp threads to track who paid what. splitwise handles everything automatically."
                     </p>
                     <p className="mt-3 text-xs font-semibold text-indigo-200">— Kunal, Goa trip 2025</p>
                 </div>
@@ -101,7 +101,7 @@ export default function Login() {
                 {/* Mobile logo */}
                 <div className="mb-8 flex items-center gap-2 lg:hidden">
                     <span className="text-2xl">💸</span>
-                    <span className="text-xl font-bold text-white">Splitwire</span>
+                    <span className="text-xl font-bold text-white">splitwise</span>
                 </div>
 
                 <div className="w-full max-w-sm">
