@@ -4,8 +4,9 @@
   "description": "Splitwise clone - Backend server",
   "main": "index.js",
   "scripts": {
-    "dev": "nodemon index.js",
+    "seed": "node prisma/seed.js",
     "start": "node index.js",
+    "dev": "nodemon index.js",
     "prisma:generate": "prisma generate --schema=prisma/schema.prisma --config=prisma.config.ts",
     "postinstall": "prisma generate --schema=prisma/schema.prisma --config=prisma.config.ts"
   },
