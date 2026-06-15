@@ -39,20 +39,18 @@ function Modal({ title, onClose, children }) {
 
     return (
         <div
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-md p-4 animate-fade-in"
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
             onClick={onClose}
         >
             <div
-                className="w-full max-w-lg rounded-2xl bg-base border border-panel-border shadow-2xl animate-scale-in overflow-hidden relative"
+                className="w-full max-w-lg rounded-2xl bg-gray-900 border border-gray-700/60 p-6 shadow-2xl"
                 onClick={(e) => e.stopPropagation()}
             >
-                <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-indigo-500 to-purple-500" />
-                
-                <div className="mb-5 flex items-center justify-between border-b border-panel-border px-6 py-5 bg-panel">
-                    <h2 className="text-lg font-bold text-primary font-display tracking-tight">{title}</h2>
+                <div className="mb-5 flex items-center justify-between">
+                    <h2 className="text-lg font-semibold text-white">{title}</h2>
                     <button
                         onClick={onClose}
-                        className="rounded-xl p-2 text-muted hover:bg-hover hover:text-primary transition-colors"
+                        className="rounded-lg p-1.5 text-gray-400 transition hover:bg-gray-700 hover:text-white"
                         aria-label="Close modal"
                     >
                         <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -60,9 +58,7 @@ function Modal({ title, onClose, children }) {
                         </svg>
                     </button>
                 </div>
-                <div className="p-6 pt-0">
-                    {children}
-                </div>
+                {children}
             </div>
         </div>
     );
@@ -79,45 +75,45 @@ function ExpenseBreakdownModal({ userName, entries = [], onClose }) {
     return (
         <Modal title={`${userName}'s breakdown`} onClose={onClose}>
             {entries.length === 0 ? (
-                <p className="py-8 text-center text-sm text-muted">
+                <p className="py-8 text-center text-sm text-gray-400">
                     No expense data available for this member.
                 </p>
             ) : (
-                <div className="max-h-[60vh] overflow-y-auto pr-2 custom-scrollbar">
+                <div className="max-h-[60vh] overflow-y-auto">
                     <table className="min-w-full text-sm">
                         <thead>
-                            <tr className="border-b border-panel-border">
+                            <tr className="border-b border-gray-700">
                                 {["Date", "Description", "Amount Owed"].map((h) => (
                                     <th
                                         key={h}
-                                        className="pb-3 pr-4 text-left text-[11px] font-bold uppercase tracking-wider text-muted last:text-right last:pr-0"
+                                        className="pb-2.5 pr-4 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 last:text-right last:pr-0"
                                     >
                                         {h}
                                     </th>
                                 ))}
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-panel-border">
+                        <tbody className="divide-y divide-gray-700/40">
                             {entries.map((e, i) => (
-                                <tr key={i} className="hover:bg-hover transition-colors">
-                                    <td className="whitespace-nowrap py-3.5 pr-4 text-secondary">
+                                <tr key={i} className="hover:bg-gray-800/30">
+                                    <td className="whitespace-nowrap py-2.5 pr-4 text-gray-400">
                                         {fmtDate(e.date)}
                                     </td>
-                                    <td className="py-3.5 pr-4 text-primary font-medium">
+                                    <td className="py-2.5 pr-4 text-gray-200">
                                         <span>
                                             {e.description.length > 34
                                                 ? e.description.slice(0, 34) + "…"
                                                 : e.description}
                                         </span>
                                         {e.isRefund && (
-                                            <span className="ml-1.5 text-[10px] font-bold uppercase tracking-wider text-emerald-500 bg-emerald-500/10 px-1.5 py-0.5 rounded-full border border-emerald-500/20">
-                                                Refund
+                                            <span className="ml-1.5 text-xs font-semibold text-emerald-400">
+                                                (refund)
                                             </span>
                                         )}
                                     </td>
                                     <td
-                                        className={`whitespace-nowrap py-3.5 text-right font-bold ${
-                                            e.isRefund ? "text-emerald-500" : "text-primary"
+                                        className={`whitespace-nowrap py-2.5 text-right font-medium ${
+                                            e.isRefund ? "text-emerald-400" : "text-white"
                                         }`}
                                     >
                                         {fmtINR(e.amountOwed)}
@@ -126,12 +122,12 @@ function ExpenseBreakdownModal({ userName, entries = [], onClose }) {
                             ))}
                         </tbody>
                         <tfoot>
-                            <tr className="border-t border-panel-border">
-                                <td className="pt-4 pb-2 text-[11px] font-bold uppercase tracking-wider text-muted">
+                            <tr className="border-t border-gray-600">
+                                <td className="pt-3 text-xs font-bold uppercase tracking-wider text-gray-400">
                                     Total
                                 </td>
                                 <td />
-                                <td className="pt-4 pb-2 text-right text-lg font-extrabold text-primary font-display">
+                                <td className="pt-3 text-right text-base font-bold text-white">
                                     {fmtINR(total)}
                                 </td>
                             </tr>
@@ -153,24 +149,22 @@ function BalanceCard({ member, isYou, onClick }) {
 
     // Guest / unknown-user row
     if (isGuest) {
-            <div className="flex items-center justify-between rounded-xl border border-panel-border bg-panel px-5 py-4 backdrop-blur-sm">
-                <div className="flex items-center gap-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-hover border border-panel-border shadow-sm">
-                        <span className="text-xl">👤</span>
-                    </div>
-                    <div>
-                        <span className="text-sm font-bold text-muted italic block">
-                            Unknown User
-                        </span>
-                        <span className="text-[10px] font-semibold uppercase tracking-wider text-secondary block mt-0.5">
-                            unassigned expenses
-                        </span>
-                    </div>
+        return (
+            <div className="flex items-center justify-between rounded-xl border border-gray-700/40 bg-gray-800/20 px-4 py-3">
+                <div className="flex items-center gap-2.5">
+                    <span className="text-base">👤</span>
+                    <span className="text-sm font-medium text-gray-500 italic">
+                        Unknown User
+                    </span>
+                    <span className="rounded-full bg-gray-700/60 px-2 py-0.5 text-xs text-gray-500">
+                        unassigned expenses
+                    </span>
                 </div>
-                <span className="text-base font-bold text-muted font-display">
+                <span className="text-sm font-semibold text-gray-500">
                     {fmtINR(balance)}
                 </span>
             </div>
+        );
     }
 
     const isOwed    = balance > 0.01;
@@ -195,30 +189,26 @@ function BalanceCard({ member, isYou, onClick }) {
         ? `owes ${fmtINR(Math.abs(balance))}`
         : "is settled up ✓";
 
+    return (
         <button
             id={`balance-card-${member.userId}`}
             onClick={onClick}
-            className={`w-full text-left rounded-xl bg-panel px-5 py-4 transition-all duration-300 hover:bg-hover hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-indigo-500/50 ${borderClass} border border-panel-border group backdrop-blur-sm`}
+            className={`w-full text-left rounded-xl bg-gray-800/50 px-4 py-3 transition hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 ${borderClass}`}
         >
             <div className="flex items-center justify-between">
-                <span className="font-bold text-primary text-base font-display tracking-tight">
+                <span className="font-medium text-white">
                     {name}
-                    {isYou && <span className="ml-2 text-[10px] font-bold uppercase tracking-wider text-muted bg-hover px-2 py-0.5 rounded-md border border-panel-border">(you)</span>}
+                    {isYou && <span className="ml-2 text-xs text-gray-500">(you)</span>}
                 </span>
-                <span className={`text-sm font-bold ${amountClass}`}>
+                <span className={`text-sm font-semibold ${amountClass}`}>
                     {statusText}
                 </span>
             </div>
             {!isSettled && (
-                <p className="mt-1 text-xs font-medium text-muted opacity-0 group-hover:opacity-100 transition-opacity duration-300 transform translate-y-1 group-hover:translate-y-0 flex items-center gap-1">
-                    <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                    </svg>
-                    Click to see breakdown
-                </p>
+                <p className="mt-0.5 text-xs text-gray-500">Click to see breakdown</p>
             )}
         </button>
+    );
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -318,15 +308,13 @@ export default function BalancesTab({ groupId, currentUserId, onSwitchToExpenses
             )}
 
             {/* ── How balances work explainer ───────────────────────────────── */}
-            <div className="rounded-2xl border border-indigo-500/20 bg-indigo-500/5 px-5 py-4 flex items-start gap-3 backdrop-blur-sm shadow-inner animate-fade-in">
-                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-indigo-500/10 border border-indigo-500/20 mt-0.5">
-                    <svg className="h-4 w-4 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                            d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                </div>
-                <p className="text-sm text-secondary leading-relaxed pt-1">
-                    <span className="font-bold text-primary uppercase tracking-wider text-xs block mb-0.5">How balances work</span>
+            <div className="rounded-xl border border-indigo-500/20 bg-indigo-500/5 px-4 py-3 flex items-start gap-3">
+                <svg className="mt-0.5 h-4 w-4 shrink-0 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                        d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <p className="text-sm text-gray-400">
+                    <span className="font-medium text-gray-200">How balances work: </span>
                     Positive = the group owes them money. Negative = they owe the group.
                     Click any card to see their expense breakdown.
                 </p>
@@ -334,7 +322,7 @@ export default function BalancesTab({ groupId, currentUserId, onSwitchToExpenses
 
             {/* ── Section B: Net Balances ───────────────────────────────────── */}
             <div>
-                <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-muted">
+                <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-gray-500">
                     Who owes what
                 </h2>
 
@@ -360,7 +348,7 @@ export default function BalancesTab({ groupId, currentUserId, onSwitchToExpenses
                     ))}
 
                     {netBalances.length === 0 && (
-                        <p className="py-8 text-center text-sm text-muted">
+                        <p className="py-8 text-center text-sm text-gray-500">
                             No balance data yet. Add some expenses first.
                         </p>
                     )}
@@ -370,10 +358,10 @@ export default function BalancesTab({ groupId, currentUserId, onSwitchToExpenses
             {/* ── Section C: Suggested Payments ────────────────────────────── */}
             <div>
                 <div className="mb-3 flex items-center justify-between">
-                    <h2 className="text-sm font-semibold uppercase tracking-wider text-muted">
+                    <h2 className="text-sm font-semibold uppercase tracking-wider text-gray-500">
                         How to settle up
                     </h2>
-                    <span className="text-xs text-secondary">Minimised transactions</span>
+                    <span className="text-xs text-gray-600">Minimised transactions</span>
                 </div>
 
                 {transactions.length === 0 && !hasUnknownExpenses ? (
@@ -387,78 +375,62 @@ export default function BalancesTab({ groupId, currentUserId, onSwitchToExpenses
                     /* Pending unknown reassignment */
                     <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-amber-700/30 bg-amber-500/5 py-10 text-center">
                         <div className="mb-2 text-3xl">⏳</div>
-                        <p className="text-sm font-semibold text-amber-500">
+                        <p className="text-sm font-semibold text-amber-300">
                             Settlement suggestions pending
                         </p>
-                        <p className="mt-1 text-xs text-muted max-w-xs">
+                        <p className="mt-1 text-xs text-gray-400 max-w-xs">
                             Reassign the unknown-payer expenses first,
                             then come back to see who should pay whom.
                         </p>
                     </div>
                 ) : (
-                    <div className="overflow-hidden rounded-2xl border border-panel-border bg-panel shadow-sm backdrop-blur-sm">
+                    /* Transaction list */
+                    <div className="overflow-hidden rounded-2xl border border-gray-700/40">
                         {transactions.map((tx, i) => {
                             const txKey = `${tx.fromUserId}-${tx.toUserId}`;
                             const isSettling = settlingTx === txKey;
                             return (
                                 <div
                                     key={i}
-                                    className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-panel-border px-5 py-4.5 last:border-b-0 hover:bg-hover transition-colors gap-4 sm:gap-0"
+                                    className="flex items-center justify-between border-b border-gray-700/40 px-5 py-4 last:border-b-0 bg-gray-800/30 hover:bg-gray-800/60 transition"
                                 >
-                                    <div className="flex items-center gap-3 min-w-0 flex-1">
+                                    <div className="flex items-center gap-2.5 min-w-0">
                                         {/* Payer */}
-                                        <div className="flex items-center gap-2">
-                                            <div className="h-8 w-8 rounded-full bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-xs font-bold text-indigo-500">
-                                                {tx.fromName.charAt(0)}
-                                            </div>
-                                            <span className="font-bold text-primary truncate max-w-[100px] sm:max-w-[140px]" title={tx.fromName}>
-                                                {tx.fromName}
-                                            </span>
-                                        </div>
+                                        <span className="font-medium text-white truncate max-w-[120px]" title={tx.fromName}>
+                                            {tx.fromName}
+                                        </span>
                                         {/* Arrow */}
-                                        <div className="flex h-6 w-6 items-center justify-center rounded-full bg-panel border border-panel-border mx-1">
-                                            <svg className="h-3 w-3 flex-shrink-0 text-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M17 8l4 4m0 0l-4 4m4-4H3" />
-                                            </svg>
-                                        </div>
+                                        <svg className="h-4 w-4 flex-shrink-0 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
+                                        </svg>
                                         {/* Payee */}
-                                        <div className="flex items-center gap-2">
-                                            <div className="h-8 w-8 rounded-full bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-xs font-bold text-purple-500">
-                                                {tx.toName.charAt(0)}
-                                            </div>
-                                            <span className="font-bold text-primary truncate max-w-[100px] sm:max-w-[140px]" title={tx.toName}>
-                                                {tx.toName}
-                                            </span>
-                                        </div>
-                                    </div>
-
-                                    <div className="flex items-center justify-between sm:justify-end gap-5">
+                                        <span className="font-medium text-white truncate max-w-[120px]" title={tx.toName}>
+                                            {tx.toName}
+                                        </span>
                                         {/* Amount */}
-                                        <span className="font-extrabold text-primary text-lg font-display tracking-tight">
+                                        <span className="flex-shrink-0 font-semibold text-indigo-300">
                                             {fmtINR(tx.amount)}
                                         </span>
-
-                                        <button
-                                            id={`settle-${txKey}`}
-                                            onClick={() => handleSettle(tx)}
-                                            disabled={isSettling}
-                                            className="flex-shrink-0 inline-flex items-center gap-2 rounded-xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-2 text-sm font-bold text-emerald-300 transition-all hover:bg-emerald-500/20 hover:border-emerald-500/40 hover:shadow-[0_0_15px_rgba(16,185,129,0.1)] focus:outline-none focus:ring-4 focus:ring-emerald-500/20 disabled:cursor-not-allowed disabled:opacity-50"
-                                        >
-                                            {isSettling ? (
-                                                <>
-                                                    <span className="h-3 w-3 animate-spin rounded-full border-2 border-emerald-400 border-t-transparent" />
-                                                    Recording…
-                                                </>
-                                            ) : (
-                                                <>
-                                                    <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-                                                    </svg>
-                                                    Settle
-                                                </>
-                                            )}
-                                        </button>
                                     </div>
+
+                                    <button
+                                        id={`settle-${txKey}`}
+                                        onClick={() => handleSettle(tx)}
+                                        disabled={isSettling}
+                                        className="ml-4 flex-shrink-0 inline-flex items-center gap-1.5 rounded-lg border border-emerald-500/30 bg-emerald-600/10 px-3 py-1.5 text-xs font-semibold text-emerald-400 transition hover:bg-emerald-600 hover:text-white hover:border-transparent focus:outline-none focus:ring-2 focus:ring-emerald-500/50 disabled:cursor-not-allowed disabled:opacity-50"
+                                    >
+                                        {isSettling ? (
+                                            <>
+                                                <svg className="h-3 w-3 animate-spin" fill="none" viewBox="0 0 24 24">
+                                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+                                                </svg>
+                                                Recording…
+                                            </>
+                                        ) : (
+                                            "Mark Settled"
+                                        )}
+                                    </button>
                                 </div>
                             );
                         })}

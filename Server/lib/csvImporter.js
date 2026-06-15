@@ -30,7 +30,7 @@ const SPLIT_TYPE_MAP = {
 const SETTLE_KEYWORDS = ["paid back", "settled", "transfer", "reimbursed", "clearing", "deposit share", "deposit"];
 
 // These are EXCLUDED entirely — not imported as expense OR settlement.
-const EXCLUDE_KEYWORDS = ["deposit share"];
+const EXCLUDE_KEYWORDS = [];
 
 // External (non-member) participants that appear in split_with.
 // Their equal share is computed but removed from group splits.

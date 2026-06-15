@@ -2,7 +2,6 @@ import { useState, useCallback, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { toast } from 'react-hot-toast'
 import api from '../api/axios'
-import ThemeToggle from '../components/ThemeToggle'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Constants & helpers
@@ -121,59 +120,55 @@ function UploadStep({ onSubmit, onDirectImport }) {
   }
 
   return (
-    <div className="min-h-screen bg-base text-primary font-sans selection:bg-indigo-500/30 selection:text-indigo-500 relative transition-colors duration-300">
+    <div className="min-h-screen bg-slate-50">
       {/* Navbar */}
-      <header className="border-b border-panel-border bg-panel/70 backdrop-blur-xl relative z-10">
-        <div className="mx-auto flex max-w-xl items-center justify-between px-4 py-3.5 sm:px-6">
+      <header className="border-b border-slate-200 bg-slate-50/90 backdrop-blur-md">
+        <div className="mx-auto flex max-w-xl items-center justify-between px-4 py-3 sm:px-6">
           <button onClick={() => window.history.back()}
-            className="flex items-center gap-2 text-sm font-semibold text-muted hover:text-primary transition-colors">
+            className="flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-900 transition">
             <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
             </svg>
             Back to group
           </button>
-          
-          <div className="flex items-center gap-4">
-            {/* Step indicator */}
-            <div className="hidden sm:flex items-center gap-2">
-              {['Upload', 'Review', 'Done'].map((s, i) => (
-                <span key={s} className={`text-xs font-bold uppercase tracking-wider ${ i === 0 ? 'text-indigo-500' : 'text-muted' }`}>
-                  {i > 0 && <span className="mr-2 text-panel-border">/</span>}{s}
-                </span>
-              ))}
-            </div>
-            <ThemeToggle />
+          {/* Step indicator */}
+          <div className="flex items-center gap-1.5">
+            {['Upload', 'Review', 'Done'].map((s, i) => (
+              <span key={s} className={`text-xs font-medium ${ i === 0 ? 'text-indigo-400' : 'text-gray-600' }`}>
+                {i > 0 && <span className="mr-1.5 text-gray-700">/</span>}{s}
+              </span>
+            ))}
           </div>
         </div>
       </header>
 
-      <div className="relative z-10 flex items-center justify-center px-4 py-12 animate-fade-in">
+      <div className="flex items-center justify-center px-4 py-12">
         <div className="w-full max-w-lg">
           {/* Header */}
           <div className="mb-8 text-center">
-            <div className="mb-5 inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-indigo-500/10 border border-indigo-500/20 shadow-inner">
-              <svg className="h-7 w-7 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+            <div className="mb-4 inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-indigo-600/20 border border-indigo-500/30">
+              <svg className="h-7 w-7 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
                   d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
               </svg>
             </div>
-            <h1 className="text-3xl font-extrabold text-primary font-display tracking-tight">Import expenses</h1>
-            <p className="mt-3 text-sm text-secondary leading-relaxed">
+            <h1 className="text-2xl font-bold text-slate-900">Import expenses from CSV</h1>
+            <p className="mt-2 text-sm text-slate-500">
               Upload your CSV — we'll scan for issues before anything is saved.
             </p>
           </div>
 
           {/* Card */}
-          <div className="rounded-2xl bg-panel border border-panel-border p-6 shadow-2xl backdrop-blur-sm">
+          <div className="rounded-2xl bg-slate-50/60 border border-slate-200/40 p-6 shadow-2xl">
             {/* Drop zone */}
             <div
               id="import-drop-zone"
-              className={`relative flex flex-col items-center justify-center rounded-xl border-2 border-dashed p-12 cursor-pointer transition-all duration-300 ${
+              className={`relative flex flex-col items-center justify-center rounded-xl border-2 border-dashed p-12 cursor-pointer transition-all duration-200 ${
                 dragging
-                  ? 'border-indigo-500 bg-indigo-500/10 scale-[1.02] shadow-[0_0_30px_rgba(99,102,241,0.15)]'
+                  ? 'border-indigo-400 bg-indigo-500/10 scale-[1.01]'
                   : selectedFile
-                  ? 'border-emerald-500/40 bg-emerald-500/5'
-                  : 'border-panel-border hover:border-indigo-500/40 hover:bg-hover'
+                  ? 'border-emerald-500/60 bg-emerald-500/5'
+                  : 'border-slate-300 hover:border-indigo-500/60 hover:bg-indigo-500/5'
               }`}
               onClick={() => fileInputRef.current?.click()}
               onDragOver={(e) => { e.preventDefault(); setDragging(true) }}
@@ -191,45 +186,70 @@ function UploadStep({ onSubmit, onDirectImport }) {
 
               {selectedFile ? (
                 <>
-                  <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-500/10 border border-emerald-500/20 shadow-inner">
-                    <svg className="h-6 w-6 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+                  <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-500/20 border border-emerald-500/30">
+                    <svg className="h-6 w-6 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                     </svg>
                   </div>
-                  <p className="font-bold text-primary text-sm tracking-wide">{selectedFile.name}</p>
-                  <p className="mt-1.5 text-xs font-semibold uppercase tracking-wider text-muted">
-                    {(selectedFile.size / 1024).toFixed(1)} KB <span className="mx-1">·</span> Click to change
+                  <p className="font-semibold text-slate-900">{selectedFile.name}</p>
+                  <p className="mt-1 text-xs text-slate-500">
+                    {(selectedFile.size / 1024).toFixed(1)} KB · Click to change
                   </p>
                 </>
               ) : (
                 <>
-                  <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-xl bg-hover border border-panel-border shadow-sm">
-                    <svg className="h-7 w-7 text-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-xl bg-slate-100/60 border border-slate-300/40">
+                    <svg className="h-6 w-6 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
                         d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m6.75 12l-3-3m0 0l-3 3m3-3v6m-1.5-15H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
                     </svg>
                   </div>
-                  <p className="font-bold text-primary">Drop your CSV here</p>
-                  <p className="mt-1 text-xs font-semibold text-muted">or click to browse <span className="mx-1">·</span> .csv only</p>
+                  <p className="font-medium text-slate-700">Drop your CSV here</p>
+                  <p className="mt-1 text-xs text-slate-400">or click to browse · .csv files only</p>
                 </>
               )}
             </div>
 
             {/* CSV format hint */}
-            <div className="mt-5 rounded-xl bg-hover border border-panel-border px-5 py-4">
-              <p className="text-[10px] font-bold text-muted uppercase tracking-wider mb-2">Expected columns</p>
-              <p className="font-mono text-xs text-secondary leading-relaxed break-words">
-                date, description, paid_by, amount, currency,
+            <div className="mt-4 rounded-xl bg-white/60 border border-slate-200/40 px-4 py-3">
+              <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Expected columns</p>
+              <p className="font-mono text-xs text-slate-500 leading-relaxed">
+                date, description, paid_by, amount, currency,<br/>
                 split_type, split_with, split_details, notes
               </p>
             </div>
 
-            {/* Preview & Import (Highlighted) */}
+            {/* Direct Import */}
+            <button
+              id="import-direct-button"
+              disabled={!selectedFile || isDirectLoading || isLoading}
+              onClick={handleDirect}
+              className="mt-3 w-full rounded-xl border border-slate-300 py-3 text-sm font-semibold text-slate-600 transition-all hover:border-gray-400 hover:text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500 disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              {isDirectLoading ? (
+                <span className="flex items-center justify-center gap-2">
+                  <span className="h-4 w-4 animate-spin rounded-full border-2 border-gray-300 border-t-transparent" />
+                  Importing…
+                </span>
+              ) : (
+                <span className="flex items-center justify-center gap-1.5">
+                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
+                  </svg>
+                  Direct Import (Seeder Mode) ⚡
+                </span>
+              )}
+            </button>
+            <p className="mt-2 text-center text-xs text-slate-400">
+              Seeder Mode skips the review step — uses the exact same logic as the seed script.
+            </p>
+
+            {/* Preview */}
             <button
               id="import-preview-button"
               disabled={!selectedFile || isLoading || isDirectLoading}
               onClick={handlePreview}
-              className="mt-6 w-full rounded-xl bg-gradient-to-r from-indigo-500 to-purple-600 py-3 text-sm font-bold text-white shadow-lg shadow-indigo-500/25 transition-all hover:shadow-indigo-500/40 hover:-translate-y-0.5 active:translate-y-0 active:scale-95 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:translate-y-0"
+              className="mt-2 w-full rounded-xl bg-indigo-600 py-3 text-sm font-semibold text-white transition-all hover:bg-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:cursor-not-allowed disabled:opacity-40"
             >
               {isLoading ? (
                 <span className="flex items-center justify-center gap-2">
@@ -237,37 +257,6 @@ function UploadStep({ onSubmit, onDirectImport }) {
                   Uploading…
                 </span>
               ) : 'Review & Import manually →'}
-            </button>
-            <p className="mt-2 mb-4 text-center text-[10px] font-semibold uppercase tracking-wider text-indigo-500">
-              Recommended: Safely review data before import
-            </p>
-
-            <div className="flex items-center gap-3 my-4">
-              <div className="h-px flex-1 bg-panel-border" />
-              <span className="text-[10px] uppercase font-bold text-muted">or bypass review</span>
-              <div className="h-px flex-1 bg-panel-border" />
-            </div>
-
-            {/* Direct Import (Unhighlighted) */}
-            <button
-              id="import-direct-button"
-              disabled={!selectedFile || isDirectLoading || isLoading}
-              onClick={handleDirect}
-              className="w-full rounded-xl border border-panel-border bg-panel py-3 text-sm font-bold text-secondary transition-all hover:bg-hover hover:text-primary focus:outline-none focus:ring-4 focus:ring-emerald-500/20 disabled:cursor-not-allowed disabled:opacity-40"
-            >
-              {isDirectLoading ? (
-                <span className="flex items-center justify-center gap-2">
-                  <span className="h-4 w-4 animate-spin rounded-full border-2 border-secondary border-t-transparent" />
-                  Importing…
-                </span>
-              ) : (
-                <span className="flex items-center justify-center gap-2">
-                  <svg className="h-4 w-4 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                  </svg>
-                  Direct Import (Seeder Mode)
-                </span>
-              )}
             </button>
           </div>
         </div>
@@ -282,18 +271,16 @@ function UploadStep({ onSubmit, onDirectImport }) {
 
 function LoadingStep({ message, sub }) {
   return (
-    <div className="min-h-screen bg-base text-primary flex flex-col items-center justify-center gap-6 relative transition-colors duration-300">
-      <div className="relative z-10 flex flex-col items-center animate-fade-in">
-        <div className="relative mb-6">
-          <div className="h-16 w-16 animate-spin rounded-full border-4 border-panel-border border-t-indigo-500" />
-          <div className="absolute inset-0 flex items-center justify-center">
-            <div className="h-6 w-6 rounded-full bg-indigo-500/20 animate-pulse shadow-[0_0_15px_rgba(99,102,241,0.5)]" />
-          </div>
+    <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center gap-5">
+      <div className="relative">
+        <div className="h-14 w-14 animate-spin rounded-full border-4 border-indigo-500/30 border-t-indigo-400" />
+        <div className="absolute inset-0 flex items-center justify-center">
+          <div className="h-6 w-6 rounded-full bg-indigo-500/20 animate-pulse" />
         </div>
-        <div className="text-center">
-          <p className="text-xl font-extrabold text-primary font-display tracking-tight">{message}</p>
-          {sub && <p className="mt-2 text-sm font-semibold text-secondary">{sub}</p>}
-        </div>
+      </div>
+      <div className="text-center">
+        <p className="text-base font-medium text-slate-700">{message}</p>
+        {sub && <p className="mt-1 text-sm text-slate-400">{sub}</p>}
       </div>
     </div>
   )
@@ -307,17 +294,17 @@ function AnomalyCard({ anomaly, rowNumber, anomalyIndex, selectedAction, onActio
   const radioName = `row-${rowNumber}-anomaly-${anomalyIndex}`
 
   return (
-    <div className="rounded-xl border border-white/5 bg-white/[0.02] p-5 space-y-4 shadow-sm backdrop-blur-sm">
+    <div className="rounded-xl border border-slate-200/40 bg-white/60 p-4 space-y-3">
       {/* Type badge + message */}
-      <div className="flex flex-wrap items-start gap-3">
-        <span className={`inline-flex items-center rounded-lg border px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider ${anomalyBadgeClass(anomaly.type)}`}>
+      <div className="flex flex-wrap items-start gap-2">
+        <span className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold ${anomalyBadgeClass(anomaly.type)}`}>
           {anomaly.type.replaceAll('_', ' ')}
         </span>
-        <p className="text-sm text-slate-300 leading-relaxed flex-1 min-w-0 font-medium">{anomaly.message}</p>
+        <p className="text-sm text-slate-600 leading-snug flex-1 min-w-0">{anomaly.message}</p>
       </div>
 
       {/* Action selector */}
-      <div className="flex flex-wrap gap-x-6 gap-y-3 pl-1 pt-2 border-t border-white/5">
+      <div className="flex flex-wrap gap-x-5 gap-y-2 pl-1">
         {anomaly.options.map((option) => {
           const id = `${radioName}-${option}`
           const isSelected = (selectedAction ?? anomaly.defaultAction) === option
@@ -325,11 +312,8 @@ function AnomalyCard({ anomaly, rowNumber, anomalyIndex, selectedAction, onActio
             <label
               key={option}
               htmlFor={id}
-              className="flex cursor-pointer items-center gap-2.5 group"
+              className="flex cursor-pointer items-center gap-2 group"
             >
-              <div className={`flex h-4 w-4 items-center justify-center rounded-full border transition-colors ${isSelected ? 'border-indigo-500 bg-indigo-500' : 'border-white/20 bg-transparent group-hover:border-white/40'}`}>
-                {isSelected && <div className="h-1.5 w-1.5 rounded-full bg-white" />}
-              </div>
               <input
                 id={id}
                 type="radio"
@@ -337,9 +321,9 @@ function AnomalyCard({ anomaly, rowNumber, anomalyIndex, selectedAction, onActio
                 value={option}
                 checked={isSelected}
                 onChange={() => onActionChange(option)}
-                className="hidden"
+                className="accent-indigo-500 h-3.5 w-3.5"
               />
-              <span className={`text-xs font-bold transition-colors ${isSelected ? 'text-indigo-300' : 'text-slate-400 group-hover:text-slate-200'}`}>
+              <span className={`text-xs transition ${isSelected ? 'text-indigo-300 font-medium' : 'text-slate-500 group-hover:text-slate-700'}`}>
                 {optionLabel(option, anomaly.detail)}
               </span>
             </label>
@@ -368,40 +352,40 @@ function FlaggedRowCard({ flaggedRow, rowDecisions, onRowDecisionChange }) {
   }
 
   return (
-    <div className="rounded-2xl border border-white/10 bg-[#020617]/50 overflow-hidden shadow-2xl backdrop-blur-md">
+    <div className="rounded-2xl border border-slate-200/40 bg-slate-50/50 overflow-hidden shadow-lg">
       {/* Header */}
-      <div className="flex items-center gap-3 border-b border-white/10 bg-white/5 px-5 py-4">
-        <span className="inline-flex items-center rounded-lg bg-indigo-500/10 border border-indigo-500/20 px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-indigo-300">
+      <div className="flex items-center gap-3 border-b border-slate-200/40 bg-slate-50/80 px-4 py-3">
+        <span className="inline-flex items-center rounded-lg bg-indigo-600/20 border border-indigo-500/30 px-2.5 py-1 text-xs font-bold text-indigo-300">
           Row {rowNumber}
         </span>
-        <span className="text-base font-bold text-slate-200 truncate font-display">
-          {rawData.description || <em className="text-slate-500">No description</em>}
+        <span className="text-sm font-medium text-slate-700 truncate">
+          {rawData.description || <em className="text-slate-400">No description</em>}
         </span>
-        <span className={`ml-auto text-[10px] px-2.5 py-1 rounded-md font-bold uppercase tracking-wider border ${
+        <span className={`ml-auto text-xs px-2 py-0.5 rounded-full font-semibold ${
           anomalies.length === 1
-            ? 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20'
-            : 'bg-red-500/10 text-red-400 border-red-500/20'
+            ? 'bg-yellow-500/15 text-yellow-400'
+            : 'bg-red-500/15 text-red-400'
         }`}>
           {anomalies.length} issue{anomalies.length !== 1 ? 's' : ''}
         </span>
       </div>
 
       {/* Raw data preview */}
-      <div className="px-5 py-4 border-b border-white/5 bg-white/[0.01]">
-        <p className="mb-2.5 text-[10px] font-bold uppercase tracking-wider text-slate-500">CSV data</p>
+      <div className="px-4 py-3 border-b border-slate-200/30">
+        <p className="mb-1.5 text-xs font-semibold uppercase tracking-wider text-slate-400">CSV data</p>
         <div className="flex flex-wrap gap-2">
           {Object.entries(previewFields).filter(([, v]) => v).map(([k, v]) => (
-            <span key={k} className="font-mono text-xs bg-white/5 border border-white/10 rounded-md px-2.5 py-1 shadow-sm">
-              <span className="text-slate-500">{k}:</span>{' '}
-              <span className="text-slate-300 font-medium">{v}</span>
+            <span key={k} className="font-mono text-xs bg-white/60 border border-slate-200/40 rounded-md px-2 py-0.5">
+              <span className="text-slate-400">{k}:</span>{' '}
+              <span className="text-slate-700">{v}</span>
             </span>
           ))}
         </div>
       </div>
 
       {/* Anomalies */}
-      <div className="p-5 space-y-4">
-        <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Issues to resolve</p>
+      <div className="p-4 space-y-3">
+        <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">Issues to resolve</p>
         {anomalies.map((anomaly, ai) => (
           <AnomalyCard
             key={`${rowNumber}-${ai}`}
@@ -427,50 +411,51 @@ function CleanRowsAccordion({ cleanRows }) {
   if (cleanRows.length === 0) return null
 
   return (
-    <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/5 overflow-hidden backdrop-blur-sm">
+    <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/5 overflow-hidden">
       <button
         id="clean-rows-toggle"
-        className="w-full flex items-center justify-between px-5 py-4 text-left transition-colors hover:bg-emerald-500/10 focus:outline-none"
+        className="w-full flex items-center justify-between px-5 py-4 text-left transition hover:bg-emerald-500/10"
         onClick={() => setOpen((o) => !o)}
       >
         <div className="flex items-center gap-3">
-          <span className="inline-flex items-center rounded-lg bg-emerald-500/10 border border-emerald-500/20 px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-emerald-400">
+          <span className="inline-flex items-center rounded-full bg-emerald-500/20 border border-emerald-500/30 px-2.5 py-0.5 text-xs font-semibold text-emerald-400">
             {cleanRows.length} clean
           </span>
-          <span className="text-sm font-bold text-emerald-300/80">
+          <span className="text-sm font-medium text-emerald-300">
             rows ready to import
           </span>
         </div>
-        <div className={`flex h-8 w-8 items-center justify-center rounded-full bg-emerald-500/10 transition-transform duration-300 ${open ? 'rotate-180 bg-emerald-500/20' : ''}`}>
-          <svg className="h-4 w-4 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7" />
-          </svg>
-        </div>
+        <svg
+          className={`h-4 w-4 text-slate-500 transition-transform duration-200 ${open ? 'rotate-180' : ''}`}
+          fill="none" viewBox="0 0 24 24" stroke="currentColor"
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+        </svg>
       </button>
 
       {open && (
-        <div className="overflow-x-auto border-t border-emerald-500/10 custom-scrollbar pb-2">
+        <div className="overflow-x-auto border-t border-emerald-500/20">
           <table className="min-w-full text-sm">
-            <thead className="bg-emerald-500/5">
+            <thead className="bg-slate-50/60">
               <tr>
                 {['Row', 'Date', 'Description', 'Amount', 'Currency', 'Paid By'].map((h) => (
-                  <th key={h} className="px-5 py-3.5 text-left text-[10px] font-bold uppercase tracking-wider text-emerald-500/60">
+                  <th key={h} className="px-4 py-2.5 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">
                     {h}
                   </th>
                 ))}
               </tr>
             </thead>
-            <tbody className="divide-y divide-emerald-500/10">
+            <tbody className="divide-y divide-gray-700/30">
               {cleanRows.map(({ rowNumber, parsedData: pd }) => (
-                <tr key={rowNumber} className="hover:bg-emerald-500/5 transition-colors">
-                  <td className="px-5 py-3 text-xs font-medium text-slate-500">#{rowNumber}</td>
-                  <td className="px-5 py-3 whitespace-nowrap text-slate-400 font-medium">{fmtDate(pd?.date)}</td>
-                  <td className="px-5 py-3 text-slate-200 font-medium max-w-xs truncate">{pd?.description || '—'}</td>
-                  <td className="px-5 py-3 whitespace-nowrap font-bold text-emerald-400">
+                <tr key={rowNumber} className="bg-slate-50/20 hover:bg-slate-50/50 transition">
+                  <td className="px-4 py-2.5 text-xs text-slate-400">#{rowNumber}</td>
+                  <td className="px-4 py-2.5 whitespace-nowrap text-slate-600">{fmtDate(pd?.date)}</td>
+                  <td className="px-4 py-2.5 text-slate-700 max-w-xs truncate">{pd?.description || '—'}</td>
+                  <td className="px-4 py-2.5 whitespace-nowrap text-slate-600">
                     {pd?.amount != null ? Number(pd.amount).toLocaleString('en-IN') : '—'}
                   </td>
-                  <td className="px-5 py-3 text-xs font-bold text-slate-500">{pd?.currency || 'INR'}</td>
-                  <td className="px-5 py-3 text-slate-400 font-medium">{pd?.paidById || '—'}</td>
+                  <td className="px-4 py-2.5 text-slate-500">{pd?.currency || 'INR'}</td>
+                  <td className="px-4 py-2.5 text-slate-500">{pd?.paidById || '—'}</td>
                 </tr>
               ))}
             </tbody>
@@ -607,56 +592,53 @@ function ReviewStep({ previewData, onConfirm, onCancel }) {
   }
 
   return (
-    <div className="min-h-screen bg-base text-primary font-sans selection:bg-indigo-500/30 selection:text-indigo-500 pb-28 relative transition-colors duration-300">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100 pb-28">
       {/* ── Header ── */}
-      <header className="sticky top-0 z-30 border-b border-panel-border bg-panel/70 backdrop-blur-xl">
-        <div className="mx-auto flex max-w-4xl items-center justify-between px-4 py-3.5 sm:px-6">
-          <div className="flex items-center gap-5">
-            <button
-              id="import-back-button"
-              onClick={onCancel}
-              className="rounded-xl p-2 text-muted transition-colors hover:bg-hover hover:text-primary"
-              aria-label="Go back"
-            >
-              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" />
-              </svg>
-            </button>
-            <div>
-              <h1 className="text-lg font-extrabold text-primary font-display tracking-tight">Review Import</h1>
-              <p className="text-[11px] font-bold uppercase tracking-wider text-muted mt-0.5">
-                {totalRows} rows <span className="mx-1">·</span>{' '}
-                <span className="text-emerald-500">{cleanRows.length} clean</span> <span className="mx-1">·</span>{' '}
-                <span className="text-yellow-500">{flaggedRows.length} need review</span>
-              </p>
-            </div>
+      <header className="sticky top-0 z-30 border-b border-slate-200/40 bg-slate-50/90 backdrop-blur-md">
+        <div className="mx-auto flex max-w-4xl items-center gap-4 px-4 py-3 sm:px-6">
+          <button
+            id="import-back-button"
+            onClick={onCancel}
+            className="rounded-lg p-1.5 text-slate-500 transition hover:bg-slate-100 hover:text-slate-900"
+            aria-label="Go back"
+          >
+            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
+          </button>
+          <div>
+            <h1 className="text-base font-semibold text-slate-900">Review Import</h1>
+            <p className="text-xs text-slate-500">
+              {totalRows} rows found ·{' '}
+              <span className="text-emerald-400">{cleanRows.length} clean</span> ·{' '}
+              <span className="text-yellow-400">{flaggedRows.length} need review</span>
+            </p>
           </div>
-          <ThemeToggle />
         </div>
       </header>
 
       {/* ── Body ── */}
-      <main className="relative z-10 mx-auto max-w-4xl px-4 py-8 sm:px-6 space-y-6 animate-slide-up" style={{animationDelay: '50ms'}}>
+      <main className="mx-auto max-w-4xl px-4 py-6 sm:px-6 space-y-6">
 
         {/* Auto-import banner */}
         {autoDecisions && autoDecisions.length > 0 && (
-          <div className="rounded-2xl bg-emerald-500/10 border border-emerald-500/20 px-5 py-5 flex flex-col sm:flex-row sm:items-center gap-4 shadow-sm backdrop-blur-sm">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-500/20 border border-emerald-500/30">
-              <svg className="h-5 w-5 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
+          <div className="rounded-xl bg-emerald-500/8 border border-emerald-500/25 px-4 py-4 flex items-start gap-3">
+            <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-emerald-500/20">
+              <svg className="h-4 w-4 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
               </svg>
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-bold text-emerald-300 font-display tracking-tight">Auto-import with seeder defaults</p>
-              <p className="text-[11px] font-semibold uppercase tracking-wider text-emerald-500/70 mt-1 leading-relaxed">
-                Skips review — applies smart defaults.
+              <p className="text-sm font-semibold text-emerald-300">Auto-import with seeder defaults</p>
+              <p className="text-xs text-slate-500 mt-0.5 leading-relaxed">
+                Skips the review UI — applies the same smart defaults as the seeder script.
                 Settlements auto-detected, inactive members removed, bad rows skipped.
               </p>
             </div>
             <button
               id="import-auto-button"
               onClick={handleAutoImport}
-              className="shrink-0 rounded-xl bg-emerald-500/20 border border-emerald-500/30 px-5 py-2.5 text-sm font-bold text-emerald-300 transition-all hover:bg-emerald-500/30 hover:border-emerald-500/50 hover:shadow-[0_0_15px_rgba(16,185,129,0.15)] focus:outline-none focus:ring-4 focus:ring-emerald-500/20 w-full sm:w-auto mt-2 sm:mt-0"
+              className="shrink-0 rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500"
             >
               Auto-import →
             </button>
@@ -664,40 +646,38 @@ function ReviewStep({ previewData, onConfirm, onCancel }) {
         )}
 
         {/* Instruction banner */}
-        <div className="rounded-2xl bg-indigo-500/5 border border-indigo-500/20 px-5 py-4 flex items-start gap-4 backdrop-blur-sm shadow-inner">
-          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-indigo-500/10 border border-indigo-500/20 mt-0.5">
-            <svg className="h-4 w-4 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-          </div>
+        <div className="rounded-xl bg-indigo-500/5 border border-indigo-500/20 px-4 py-3.5 flex items-start gap-3">
+          <svg className="mt-0.5 h-4 w-4 shrink-0 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
           <div>
-            <p className="text-sm font-bold text-slate-200">Or review manually</p>
-            <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-500 mt-1 leading-relaxed">
-              Flagged rows are pre-filled with seeder defaults. Change any you disagree with, then click <span className="font-bold text-indigo-400">Import</span>.
+            <p className="text-sm font-medium text-slate-700">Or review manually</p>
+            <p className="text-xs text-slate-500 mt-0.5">
+              Flagged rows are pre-filled with seeder defaults. Change any you disagree with, then click <span className="font-medium text-slate-900">Import</span>.
             </p>
           </div>
         </div>
 
         {/* Summary bar */}
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-3 gap-3">
           {[
-            { label: 'Total Rows', value: totalRows, color: 'text-primary' },
-            { label: 'Clean', value: cleanRows.length, color: 'text-emerald-500' },
-            { label: 'Need Review', value: flaggedRows.length, color: 'text-yellow-500' },
+            { label: 'Total Rows', value: totalRows, color: 'text-white' },
+            { label: 'Clean', value: cleanRows.length, color: 'text-emerald-400' },
+            { label: 'Need Review', value: flaggedRows.length, color: 'text-yellow-400' },
           ].map(({ label, value, color }) => (
-            <div key={label} className="rounded-2xl bg-panel border border-panel-border p-5 text-center backdrop-blur-sm shadow-sm">
-              <p className={`text-3xl font-extrabold ${color} font-display tracking-tight`}>{value}</p>
-              <p className="text-[10px] font-bold uppercase tracking-wider text-muted mt-1.5">{label}</p>
+            <div key={label} className="rounded-2xl bg-slate-50/60 border border-slate-200/40 p-4 text-center">
+              <p className={`text-2xl font-bold ${color}`}>{value}</p>
+              <p className="text-xs text-slate-400 mt-0.5">{label}</p>
             </div>
           ))}
         </div>
 
         {/* ── Flagged rows ── */}
         {flaggedRows.length > 0 && (
-          <section className="space-y-5">
-            <h2 className="text-[11px] font-bold uppercase tracking-wider text-yellow-500/80 flex items-center gap-2">
-              <svg className="h-4 w-4 text-yellow-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5}
+          <section className="space-y-4">
+            <h2 className="text-sm font-semibold uppercase tracking-wider text-slate-500 flex items-center gap-2">
+              <svg className="h-4 w-4 text-yellow-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
                   d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
               </svg>
               Flagged rows — resolve each issue below
@@ -717,29 +697,27 @@ function ReviewStep({ previewData, onConfirm, onCancel }) {
         <CleanRowsAccordion cleanRows={cleanRows} />
 
         {flaggedRows.length === 0 && cleanRows.length === 0 && (
-          <div className="flex flex-col items-center justify-center rounded-3xl border border-dashed border-white/10 bg-white/[0.02] py-24 text-center backdrop-blur-sm shadow-inner">
-            <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-white/5 border border-white/10 mb-5 shadow-sm">
-              <div className="text-3xl mt-1">📭</div>
-            </div>
-            <p className="text-xl font-bold text-white font-display tracking-tight">No rows found</p>
-            <p className="text-sm text-slate-400 mt-2 leading-relaxed">The CSV appears to be empty.</p>
+          <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-slate-200 py-20 text-center">
+            <p className="text-4xl mb-3">📭</p>
+            <p className="text-lg font-semibold text-slate-900">No rows found</p>
+            <p className="text-sm text-slate-500 mt-1">The CSV appears to be empty.</p>
           </div>
         )}
       </main>
 
       {/* ── Sticky action bar ── */}
-      <div className="fixed bottom-0 inset-x-0 z-40 border-t border-panel-border bg-panel/80 backdrop-blur-xl">
-        <div className="mx-auto flex max-w-4xl flex-col sm:flex-row sm:items-center sm:justify-between gap-4 px-4 py-4 sm:px-6">
+      <div className="fixed bottom-0 inset-x-0 z-40 border-t border-slate-200/60 bg-white/95 backdrop-blur-md">
+        <div className="mx-auto flex max-w-4xl items-center justify-between gap-4 px-4 py-4 sm:px-6">
           {/* Stats */}
-          <div className="flex items-center gap-5 text-[11px] font-bold uppercase tracking-wider text-muted">
+          <div className="flex items-center gap-4 text-xs text-slate-500">
             <span>
-              <span className="text-indigo-500 text-sm font-extrabold">{stats.expenses}</span> expenses
+              <span className="font-semibold text-indigo-300">{stats.expenses}</span> expenses
             </span>
             <span>
-              <span className="text-blue-500 text-sm font-extrabold">{stats.settlements}</span> settlements
+              <span className="font-semibold text-blue-300">{stats.settlements}</span> settlements
             </span>
             <span>
-              <span className="text-secondary text-sm font-extrabold">{stats.skipped}</span> skipped
+              <span className="font-semibold text-slate-400">{stats.skipped}</span> skipped
             </span>
           </div>
 
@@ -748,14 +726,14 @@ function ReviewStep({ previewData, onConfirm, onCancel }) {
             <button
               id="import-cancel-button"
               onClick={onCancel}
-              className="w-full sm:w-auto rounded-xl border border-panel-border bg-hover px-5 py-2.5 text-sm font-bold text-secondary transition-all hover:bg-panel-border hover:text-primary focus:outline-none focus:ring-4 focus:ring-slate-500/20"
+              className="rounded-xl border border-slate-300 px-4 py-2 text-sm font-medium text-slate-600 transition hover:border-gray-400 hover:text-slate-900"
             >
               Cancel
             </button>
             <button
               id="import-confirm-button"
               onClick={handleImport}
-              className="w-full sm:w-auto rounded-xl bg-gradient-to-r from-indigo-500 to-purple-600 px-6 py-2.5 text-sm font-bold text-white shadow-lg shadow-indigo-500/25 transition-all hover:shadow-indigo-500/40 hover:-translate-y-0.5 active:translate-y-0 active:scale-95 focus:outline-none focus:ring-4 focus:ring-indigo-500/20"
+              className="rounded-xl bg-indigo-600 px-5 py-2 text-sm font-semibold text-white transition hover:bg-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
             >
               {importCount === 0
                 ? 'Confirm (skip all) →'
@@ -774,35 +752,11 @@ function ReviewStep({ previewData, onConfirm, onCancel }) {
 // ─────────────────────────────────────────────────────────────────────────────
 
 function CompleteStep({ importResult, groupId, onNavigate }) {
-  const { imported, importedAsSettlements, skipped, errored, errors, sessionId, log } = importResult
+  const { imported, importedAsSettlements, skipped, errored, errors, sessionId } = importResult
   const [errorsOpen, setErrorsOpen] = useState(false)
 
   function downloadReport() {
-    if (sessionId === 'direct' && log) {
-      // Build CSV dynamically from the returned log data for direct mode
-      const headers = ["Row Number", "Anomaly Type", "Action Taken", "Status", "Raw Data"];
-      const rows = log.map(l => [
-        l.rowNumber !== null ? l.rowNumber : "",
-        l.anomalyType || "",
-        l.actionTaken || "",
-        l.status || "",
-        l.rawData ? JSON.stringify(l.rawData).replace(/"/g, '""') : ""
-      ]);
-      const csvContent = [
-        headers.join(","),
-        ...rows.map(row => row.map(v => `"${v}"`).join(","))
-      ].join("\n");
-      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `import-report-${new Date().toISOString().slice(0, 10)}.csv`;
-      a.click();
-      URL.revokeObjectURL(url);
-      return;
-    }
-
-    if (!sessionId) {
+    if (!sessionId || sessionId === 'direct') {
       toast.error('CSV report is not available for this session.')
       return
     }
@@ -814,61 +768,52 @@ function CompleteStep({ importResult, groupId, onNavigate }) {
   }
 
   return (
-    <div className="min-h-screen bg-base text-primary flex flex-col items-center justify-center relative p-4 transition-colors duration-300">
-      <div className="absolute top-4 right-4 z-50">
-         <ThemeToggle />
-      </div>
-      <div className="w-full max-w-lg text-center relative z-10 animate-scale-in">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100 flex items-center justify-center p-4">
+      <div className="w-full max-w-lg text-center">
         {/* Success icon */}
-        <div className="mb-6 inline-flex h-24 w-24 items-center justify-center rounded-full bg-emerald-500/10 border-2 border-emerald-500/20 shadow-[0_0_30px_rgba(16,185,129,0.15)] backdrop-blur-sm">
-          <svg className="h-10 w-10 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+        <div className="mb-6 inline-flex h-20 w-20 items-center justify-center rounded-full bg-emerald-500/20 border-2 border-emerald-500/40 shadow-lg shadow-emerald-500/10">
+          <svg className="h-10 w-10 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
           </svg>
         </div>
 
         {/* Big number */}
-        <p className="text-7xl font-extrabold text-primary mb-2 font-display tracking-tight">{imported}</p>
-        <p className="text-sm font-bold uppercase tracking-wider text-muted mb-10">expenses imported</p>
+        <p className="text-6xl font-extrabold text-slate-900 mb-1">{imported}</p>
+        <p className="text-xl text-slate-500 mb-8">expenses imported</p>
 
         {/* Stats grid */}
-        <div className="grid grid-cols-3 gap-4 mb-8">
+        <div className="grid grid-cols-3 gap-3 mb-6">
           {[
-            { label: 'Settlements', value: importedAsSettlements, color: 'text-blue-500', bg: 'bg-blue-500/5 border-blue-500/20' },
-            { label: 'Skipped', value: skipped, color: 'text-secondary', bg: 'bg-panel border-panel-border' },
-            { label: 'Errors', value: errored, color: errored > 0 ? 'text-red-500' : 'text-secondary', bg: errored > 0 ? 'bg-red-500/5 border-red-500/20' : 'bg-panel border-panel-border' },
+            { label: 'Settlements', value: importedAsSettlements, color: 'text-blue-400', bg: 'bg-blue-500/10 border-blue-500/20' },
+            { label: 'Skipped', value: skipped, color: 'text-slate-500', bg: 'bg-slate-100/40 border-slate-300/30' },
+            { label: 'Errors', value: errored, color: errored > 0 ? 'text-red-400' : 'text-slate-400', bg: errored > 0 ? 'bg-red-500/10 border-red-500/20' : 'bg-slate-100/40 border-slate-300/30' },
           ].map(({ label, value, color, bg }) => (
-            <div key={label} className={`rounded-2xl border p-5 backdrop-blur-sm shadow-sm ${bg}`}>
-              <p className={`text-3xl font-extrabold font-display ${color}`}>{value}</p>
-              <p className="text-[10px] font-bold uppercase tracking-wider text-muted mt-1.5">{label}</p>
+            <div key={label} className={`rounded-2xl border p-4 ${bg}`}>
+              <p className={`text-2xl font-bold ${color}`}>{value}</p>
+              <p className="text-xs text-slate-400 mt-0.5">{label}</p>
             </div>
           ))}
         </div>
 
         {/* Errors expandable */}
         {errors?.length > 0 && (
-          <div className="mb-8 rounded-2xl border border-red-500/20 bg-red-500/5 overflow-hidden text-left backdrop-blur-sm">
+          <div className="mb-6 rounded-2xl border border-red-500/20 bg-red-500/5 overflow-hidden text-left">
             <button
-              className="w-full flex items-center justify-between px-5 py-4 text-sm font-bold text-red-500 hover:bg-red-500/10 transition-colors focus:outline-none"
+              className="w-full flex items-center justify-between px-4 py-3 text-sm font-medium text-red-300 hover:bg-red-500/10 transition"
               onClick={() => setErrorsOpen((o) => !o)}
             >
-              <span className="flex items-center gap-2">
-                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                </svg>
-                {errors.length} row error{errors.length !== 1 ? 's' : ''}
-              </span>
-              <div className={`flex h-6 w-6 items-center justify-center rounded-full bg-red-500/10 transition-transform duration-300 ${errorsOpen ? 'rotate-180 bg-red-500/20' : ''}`}>
-                <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7" />
-                </svg>
-              </div>
+              <span>{errors.length} row error{errors.length !== 1 ? 's' : ''}</span>
+              <svg className={`h-4 w-4 transition-transform ${errorsOpen ? 'rotate-180' : ''}`}
+                fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
             </button>
             {errorsOpen && (
-              <ul className="border-t border-red-500/10 divide-y divide-red-500/10 bg-red-500/[0.02]">
+              <ul className="border-t border-red-500/20 divide-y divide-red-500/10">
                 {errors.map((e, i) => (
-                  <li key={i} className="px-5 py-3 text-xs text-red-500/80">
-                    <span className="font-bold text-red-500 uppercase tracking-wider text-[10px]">Row {e.rowNumber}:</span>{' '}
-                    <span className="font-medium text-red-500/90 ml-1">{e.reason}</span>
+                  <li key={i} className="px-4 py-2.5 text-sm text-red-300">
+                    <span className="font-semibold text-red-400">Row {e.rowNumber}:</span>{' '}
+                    <span className="text-red-300/80">{e.reason}</span>
                   </li>
                 ))}
               </ul>
@@ -877,25 +822,25 @@ function CompleteStep({ importResult, groupId, onNavigate }) {
         )}
 
         {/* Buttons */}
-        <div className="flex flex-col sm:flex-row sm:justify-center gap-4">
+        <div className="flex flex-col gap-3 sm:flex-row sm:justify-center">
           <button
             id="import-view-group-button"
             onClick={() => onNavigate(`/groups/${groupId}`)}
-            className="w-full sm:w-auto rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 px-8 py-3.5 text-sm font-bold text-white shadow-lg shadow-emerald-500/25 transition-all hover:shadow-emerald-500/40 hover:-translate-y-0.5 active:translate-y-0 active:scale-95 focus:outline-none focus:ring-4 focus:ring-emerald-500/20"
+            className="rounded-xl bg-indigo-600 px-6 py-2.5 text-sm font-semibold text-white transition hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
           >
             View Group Expenses →
           </button>
           <button
             id="import-download-report-button"
             onClick={downloadReport}
-            className="w-full sm:w-auto rounded-xl border border-panel-border bg-panel px-8 py-3.5 text-sm font-bold text-secondary transition-all hover:bg-hover hover:text-primary focus:outline-none focus:ring-4 focus:ring-slate-500/20"
+            className="rounded-xl border border-slate-300 px-6 py-2.5 text-sm font-medium text-slate-600 transition hover:border-gray-400 hover:text-slate-900"
           >
             Download Report
           </button>
         </div>
 
         {/* Session ID */}
-        <p className="mt-8 text-[10px] font-bold uppercase tracking-wider text-muted">Session: {sessionId}</p>
+        <p className="mt-6 text-xs text-gray-600">Session: {sessionId}</p>
       </div>
     </div>
   )

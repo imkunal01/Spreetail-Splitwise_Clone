@@ -5,7 +5,6 @@ import api from "../api/axios";
 import { useAuth } from "../context/AuthContext";
 import UnknownUserBanner from "../components/UnknownUserBanner";
 import BalancesTab from "../components/BalancesTab";
-import ThemeToggle from "../components/ThemeToggle";
 
 // ─── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -49,20 +48,18 @@ function Modal({ title, onClose, children }) {
 
     return (
         <div
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-md p-4 animate-fade-in"
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
             onClick={onClose}
         >
             <div
-                className="w-full max-w-md rounded-2xl bg-base border border-panel-border shadow-2xl animate-scale-in overflow-hidden relative"
+                className="w-full max-w-md rounded-2xl bg-gray-900 border border-gray-700/60 p-6 shadow-2xl"
                 onClick={(e) => e.stopPropagation()}
             >
-                <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-indigo-500 to-purple-500" />
-                
-                <div className="flex items-center justify-between border-b border-panel-border px-6 py-5 bg-panel">
-                    <h2 className="text-lg font-bold text-primary font-display tracking-tight">{title}</h2>
+                <div className="mb-5 flex items-center justify-between">
+                    <h2 className="text-lg font-semibold text-white">{title}</h2>
                     <button
                         onClick={onClose}
-                        className="rounded-xl p-2 text-muted hover:bg-hover hover:text-primary transition-colors"
+                        className="rounded-lg p-1.5 text-gray-400 transition hover:bg-gray-700 hover:text-white"
                         aria-label="Close modal"
                     >
                         <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -70,9 +67,7 @@ function Modal({ title, onClose, children }) {
                         </svg>
                     </button>
                 </div>
-                <div className="p-6">
-                    {children}
-                </div>
+                {children}
             </div>
         </div>
     );
@@ -120,7 +115,7 @@ function AddMemberModal({ groupId, onClose, onSuccess }) {
                 )}
 
                 <div>
-                    <label htmlFor="add-member-email" className="mb-1.5 block text-sm font-medium text-secondary">
+                    <label htmlFor="add-member-email" className="mb-1.5 block text-sm font-medium text-gray-300">
                         Email Address
                     </label>
                     <input
@@ -130,12 +125,12 @@ function AddMemberModal({ groupId, onClose, onSuccess }) {
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
                         placeholder="member@example.com"
-                        className="w-full rounded-xl border border-panel-border bg-panel px-4 py-2.5 text-sm text-primary placeholder-muted transition focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/30"
+                        className="w-full rounded-xl border border-gray-600 bg-gray-800 px-4 py-2.5 text-sm text-white placeholder-gray-500 transition focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/30"
                     />
                 </div>
 
                 <div>
-                    <label htmlFor="add-member-joined" className="mb-1.5 block text-sm font-medium text-secondary">
+                    <label htmlFor="add-member-joined" className="mb-1.5 block text-sm font-medium text-gray-300">
                         Joined Date
                     </label>
                     <input
@@ -143,7 +138,7 @@ function AddMemberModal({ groupId, onClose, onSuccess }) {
                         type="date"
                         value={joinedAt}
                         onChange={(e) => setJoinedAt(e.target.value)}
-                        className="w-full rounded-xl border border-panel-border bg-panel px-4 py-2.5 text-sm text-primary transition focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/30"
+                        className="w-full rounded-xl border border-gray-600 bg-gray-800 px-4 py-2.5 text-sm text-white transition focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 [color-scheme:dark]"
                     />
                 </div>
 
@@ -196,9 +191,9 @@ function MarkLeftModal({ groupId, member, onClose, onSuccess }) {
 
     return (
         <Modal title="Mark as Left" onClose={onClose}>
-            <p className="mb-4 text-sm text-secondary">
+            <p className="mb-4 text-sm text-gray-400">
                 Mark{" "}
-                <span className="font-medium text-primary">{member.name}</span> as having
+                <span className="font-medium text-white">{member.name}</span> as having
                 left the group.
             </p>
 
@@ -210,7 +205,7 @@ function MarkLeftModal({ groupId, member, onClose, onSuccess }) {
                 )}
 
                 <div>
-                    <label htmlFor="left-date-input" className="mb-1.5 block text-sm font-medium text-secondary">
+                    <label htmlFor="left-date-input" className="mb-1.5 block text-sm font-medium text-gray-300">
                         Left Date
                     </label>
                     <input
@@ -223,10 +218,10 @@ function MarkLeftModal({ groupId, member, onClose, onSuccess }) {
                                 ? new Date(member.joinedAt).toISOString().split("T")[0]
                                 : undefined
                         }
-                        className="w-full rounded-xl border border-panel-border bg-panel px-4 py-2.5 text-sm text-primary transition focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/30"
+                        className="w-full rounded-xl border border-gray-600 bg-gray-800 px-4 py-2.5 text-sm text-white transition focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 [color-scheme:dark]"
                     />
                     {member.joinedAt && (
-                        <p className="mt-1 text-xs text-muted">
+                        <p className="mt-1 text-xs text-gray-500">
                             Joined: {formatDate(member.joinedAt)}
                         </p>
                     )}
@@ -259,7 +254,7 @@ function MembersTab({ groupId, members, group, currentUserId, onRefetch }) {
         <div>
             {/* Header row */}
             <div className="mb-4 flex items-center justify-between">
-                <p className="text-sm text-muted">
+                <p className="text-sm text-gray-400">
                     {members.length} {members.length === 1 ? "member" : "members"}
                 </p>
                 {isActiveMember && (
@@ -277,35 +272,35 @@ function MembersTab({ groupId, members, group, currentUserId, onRefetch }) {
             </div>
 
             {/* Table */}
-            <div className="overflow-hidden rounded-2xl border border-panel-border bg-panel shadow-sm backdrop-blur-sm">
+            <div className="overflow-hidden rounded-2xl border border-gray-700/40">
                 <div className="overflow-x-auto">
                     <table className="min-w-full text-sm">
-                        <thead className="bg-hover border-b border-panel-border">
+                        <thead className="bg-gray-800/60">
                             <tr>
                                 {["Name", "Email", "Joined", "Left", "Status", ""].map((h) => (
                                     <th
                                         key={h}
-                                        className="px-5 py-3.5 text-left text-[11px] font-bold uppercase tracking-wider text-muted"
+                                        className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-400"
                                     >
                                         {h}
                                     </th>
                                 ))}
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-panel-border">
+                        <tbody className="divide-y divide-gray-700/40">
                             {members.map((m) => (
-                                <tr key={`${m.id}-${m.joinedAt}`} className="transition hover:bg-hover">
-                                    <td className="whitespace-nowrap px-4 py-3 font-medium text-primary">
+                                <tr key={`${m.id}-${m.joinedAt}`} className="bg-gray-800/30 transition hover:bg-gray-800/60">
+                                    <td className="whitespace-nowrap px-4 py-3 font-medium text-white">
                                         {m.name}
                                         {m.id === currentUserId && (
-                                            <span className="ml-2 text-xs text-muted">(you)</span>
+                                            <span className="ml-2 text-xs text-gray-500">(you)</span>
                                         )}
                                     </td>
-                                    <td className="whitespace-nowrap px-4 py-3 text-secondary">{m.email}</td>
-                                    <td className="whitespace-nowrap px-4 py-3 text-secondary">
+                                    <td className="whitespace-nowrap px-4 py-3 text-gray-400">{m.email}</td>
+                                    <td className="whitespace-nowrap px-4 py-3 text-gray-300">
                                         {formatDate(m.joinedAt)}
                                     </td>
-                                    <td className="whitespace-nowrap px-4 py-3 text-secondary">
+                                    <td className="whitespace-nowrap px-4 py-3 text-gray-400">
                                         {formatDate(m.leftAt)}
                                     </td>
                                     <td className="whitespace-nowrap px-4 py-3">
@@ -491,8 +486,8 @@ function AddExpenseModal({ groupId, members, onClose, onSuccess }) {
         }
     }
 
-    const inputCls = "w-full rounded-xl border border-panel-border bg-panel px-4 py-2.5 text-sm text-primary placeholder-muted transition focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/30";
-    const labelCls = "mb-1.5 block text-sm font-medium text-secondary";
+    const inputCls = "w-full rounded-xl border border-gray-600 bg-gray-800 px-4 py-2.5 text-sm text-white placeholder-gray-500 transition focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/30";
+    const labelCls = "mb-1.5 block text-sm font-medium text-gray-300";
 
     return (
         <Modal title="Add Expense" onClose={onClose}>
@@ -549,7 +544,7 @@ function AddExpenseModal({ groupId, members, onClose, onSuccess }) {
                                             onChange={() => setCurrency(c)}
                                             className="accent-indigo-500"
                                         />
-                                        <span className="text-sm text-secondary">{c}</span>
+                                        <span className="text-sm text-gray-200">{c}</span>
                                     </label>
                                 ))}
                             </div>
@@ -570,7 +565,7 @@ function AddExpenseModal({ groupId, members, onClose, onSuccess }) {
                                 className={inputCls}
                             />
                             {liveRateNote && (
-                                <p className="mt-1 text-xs text-muted">{liveRateNote}</p>
+                                <p className="mt-1 text-xs text-gray-500">{liveRateNote}</p>
                             )}
                             {amountNum > 0 && (
                                 <p className="mt-1 text-xs text-indigo-400">
@@ -587,7 +582,7 @@ function AddExpenseModal({ groupId, members, onClose, onSuccess }) {
                             id="expense-paidby"
                             value={paidById}
                             onChange={(e) => setPaidById(e.target.value)}
-                            className={inputCls}
+                            className={inputCls + " [color-scheme:dark]"}
                         >
                             {activeMembers.map((m) => (
                                 <option key={m.id} value={m.id}>
@@ -605,7 +600,7 @@ function AddExpenseModal({ groupId, members, onClose, onSuccess }) {
                             type="date"
                             value={date}
                             onChange={(e) => setDate(e.target.value)}
-                            className={inputCls}
+                            className={inputCls + " [color-scheme:dark]"}
                         />
                     </div>
 
@@ -623,15 +618,15 @@ function AddExpenseModal({ groupId, members, onClose, onSuccess }) {
                                         onChange={() => setSplitType(t)}
                                         className="accent-indigo-500"
                                     />
-                                    <span className="text-sm text-secondary">{t}</span>
+                                    <span className="text-sm text-gray-200">{t}</span>
                                 </label>
                             ))}
                         </div>
                     </div>
 
                     {/* ── Split section ── */}
-                    <div className="rounded-xl border border-panel-border bg-hover p-4 space-y-3">
-                        <p className="text-xs font-semibold uppercase tracking-wider text-muted">Split Among</p>
+                    <div className="rounded-xl border border-gray-700/60 bg-gray-800/40 p-4 space-y-3">
+                        <p className="text-xs font-semibold uppercase tracking-wider text-gray-500">Split Among</p>
 
                         {splitType === "EQUAL" && (
                             <>
@@ -647,7 +642,7 @@ function AddExpenseModal({ groupId, members, onClose, onSuccess }) {
                                                 }
                                                 className="accent-indigo-500"
                                             />
-                                            <span className="text-sm text-secondary">{m.name}</span>
+                                            <span className="text-sm text-gray-200">{m.name}</span>
                                         </div>
                                     </label>
                                 ))}
@@ -661,14 +656,14 @@ function AddExpenseModal({ groupId, members, onClose, onSuccess }) {
                             <>
                                 {activeMembers.map((m) => (
                                     <div key={m.id} className="flex items-center gap-3">
-                                        <span className="w-28 truncate text-sm text-secondary">{m.name}</span>
+                                        <span className="w-28 truncate text-sm text-gray-200">{m.name}</span>
                                         <input
                                             type="number"
                                             min="0"
                                             step="0.01"
                                             value={splitValues[m.id] ?? 0}
                                             onChange={(e) => setSplit(m.id, e.target.value)}
-                                            className="w-full rounded-lg border border-panel-border bg-panel px-3 py-1.5 text-sm text-primary focus:border-indigo-500 focus:outline-none"
+                                            className="w-full rounded-lg border border-gray-600 bg-gray-800 px-3 py-1.5 text-sm text-white focus:border-indigo-500 focus:outline-none"
                                         />
                                     </div>
                                 ))}
@@ -682,7 +677,7 @@ function AddExpenseModal({ groupId, members, onClose, onSuccess }) {
                             <>
                                 {activeMembers.map((m) => (
                                     <div key={m.id} className="flex items-center gap-3">
-                                        <span className="w-28 truncate text-sm text-secondary">{m.name}</span>
+                                        <span className="w-28 truncate text-sm text-gray-200">{m.name}</span>
                                         <div className="relative flex-1">
                                             <input
                                                 type="number"
@@ -691,9 +686,9 @@ function AddExpenseModal({ groupId, members, onClose, onSuccess }) {
                                                 step="0.01"
                                                 value={splitValues[m.id] ?? 0}
                                                 onChange={(e) => setSplit(m.id, e.target.value)}
-                                                className="w-full rounded-lg border border-panel-border bg-panel py-1.5 pl-3 pr-8 text-sm text-primary focus:border-indigo-500 focus:outline-none"
+                                                className="w-full rounded-lg border border-gray-600 bg-gray-800 py-1.5 pl-3 pr-8 text-sm text-white focus:border-indigo-500 focus:outline-none"
                                             />
-                                            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted">%</span>
+                                            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-400">%</span>
                                         </div>
                                     </div>
                                 ))}
@@ -707,14 +702,14 @@ function AddExpenseModal({ groupId, members, onClose, onSuccess }) {
                             <>
                                 {activeMembers.map((m) => (
                                     <div key={m.id} className="flex items-center gap-3">
-                                        <span className="w-28 truncate text-sm text-secondary">{m.name}</span>
+                                        <span className="w-28 truncate text-sm text-gray-200">{m.name}</span>
                                         <input
                                             type="number"
                                             min="1"
                                             step="1"
                                             value={splitValues[m.id] ?? 1}
                                             onChange={(e) => setSplit(m.id, e.target.value)}
-                                            className="w-20 rounded-lg border border-panel-border bg-panel px-3 py-1.5 text-sm text-primary focus:border-indigo-500 focus:outline-none"
+                                            className="w-20 rounded-lg border border-gray-600 bg-gray-800 px-3 py-1.5 text-sm text-white focus:border-indigo-500 focus:outline-none"
                                         />
                                         <span className="text-xs text-indigo-400">
                                             = {ratioSum > 0 ? fmtINR(((parseFloat(splitValues[m.id]) || 1) / ratioSum) * amountINR) : "—"}
@@ -790,8 +785,8 @@ function ExpensesTab({ groupId, members, group, currentUserId }) {
             {/* Header */}
             <div className="mb-5 flex items-center justify-between">
                 <div>
-                    <h2 className="text-base font-semibold text-primary">Expenses</h2>
-                    <p className="text-xs text-muted mt-0.5">
+                    <h2 className="text-base font-semibold text-white">Expenses</h2>
+                    <p className="text-xs text-gray-500 mt-0.5">
                         {expenses.length === 0
                             ? "No expenses yet — add one or import a CSV"
                             : `${expenses.length} ${expenses.length === 1 ? "expense" : "expenses"} logged`
@@ -812,56 +807,54 @@ function ExpensesTab({ groupId, members, group, currentUserId }) {
 
             {expenses.length === 0 ? (
                 /* Empty state */
-                <div className="flex flex-col items-center justify-center rounded-3xl border border-dashed border-panel-border bg-panel py-24 text-center backdrop-blur-sm shadow-inner">
-                    <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-hover border border-panel-border mb-5 shadow-sm">
-                        <div className="text-3xl mt-1">🧾</div>
-                    </div>
-                    <h2 className="mb-2 text-xl font-bold text-primary font-display tracking-tight">No expenses yet</h2>
-                    <p className="mb-8 max-w-sm text-sm text-muted leading-relaxed">
+                <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-gray-700 py-24 text-center">
+                    <div className="mb-4 text-5xl">🧾</div>
+                    <h2 className="mb-2 text-xl font-semibold text-white">No expenses yet</h2>
+                    <p className="mb-6 max-w-sm text-sm text-gray-400">
                         Add your first expense to start tracking who owes what.
                     </p>
                     <button
                         id="add-expense-empty-button"
                         onClick={() => setShowAddModal(true)}
-                        className="rounded-xl bg-gradient-to-r from-indigo-500 to-purple-600 px-6 py-3 text-sm font-bold text-white shadow-lg shadow-indigo-500/25 transition-all hover:shadow-indigo-500/40 hover:-translate-y-0.5 active:translate-y-0 active:scale-95"
+                        className="rounded-xl bg-indigo-600 px-6 py-2.5 text-sm font-semibold text-white transition hover:bg-indigo-700"
                     >
                         Add Expense
                     </button>
                 </div>
             ) : (
                 /* Expense table */
-                <div className="overflow-hidden rounded-2xl border border-panel-border bg-panel shadow-sm backdrop-blur-sm">
+                <div className="overflow-hidden rounded-2xl border border-gray-700/40">
                     <div className="overflow-x-auto">
                         <table className="min-w-full text-sm">
-                            <thead className="bg-hover border-b border-panel-border">
+                            <thead className="bg-gray-800/60">
                                 <tr>
                                     {["Date", "Description", "Paid By", "Amount", "Split", ""].map((h) => (
-                                        <th key={h} className="px-5 py-3.5 text-left text-[11px] font-bold uppercase tracking-wider text-muted">
+                                        <th key={h} className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-400">
                                             {h}
                                         </th>
                                     ))}
                                 </tr>
                             </thead>
-                            <tbody className="divide-y divide-panel-border">
+                            <tbody className="divide-y divide-gray-700/40">
                                 {expenses.map((exp) => {
                                     const canDelete =
                                         exp.paidBy?.id === currentUserId ||
                                         group?.createdById === currentUserId;
                                     return (
-                                        <tr key={exp.id} className="transition hover:bg-hover">
+                                        <tr key={exp.id} className="bg-gray-800/30 transition hover:bg-gray-800/60">
                                             {/* Date */}
-                                            <td className="whitespace-nowrap px-4 py-3 text-secondary">
+                                            <td className="whitespace-nowrap px-4 py-3 text-gray-400">
                                                 {fmtExpenseDate(exp.date)}
                                             </td>
                                             {/* Description */}
-                                            <td className="px-4 py-3 font-medium text-primary">
+                                            <td className="px-4 py-3 font-medium text-white">
                                                 <span title={exp.description}>
                                                     {exp.description.length > 40
                                                         ? exp.description.slice(0, 40) + "…"
                                                         : exp.description}
                                                 </span>
                                                 {exp.isRefund && (
-                                                    <span className="ml-2 inline-flex items-center rounded-full bg-emerald-500/15 px-2 py-0.5 text-xs font-semibold text-emerald-500">
+                                                    <span className="ml-2 inline-flex items-center rounded-full bg-emerald-500/15 px-2 py-0.5 text-xs font-semibold text-emerald-400">
                                                         Refund
                                                     </span>
                                                 )}
@@ -869,20 +862,20 @@ function ExpensesTab({ groupId, members, group, currentUserId }) {
                                             {/* Paid By */}
                                             <td className="whitespace-nowrap px-4 py-3">
                                                 {exp.paidBy?.isGuest ? (
-                                                    <span className="font-medium text-amber-500">
+                                                    <span className="font-medium text-amber-400">
                                                         Unknown User
                                                     </span>
                                                 ) : (
-                                                    <span className="text-secondary">
+                                                    <span className="text-gray-300">
                                                         {exp.paidBy?.name}
                                                         {exp.paidBy?.id === currentUserId && (
-                                                            <span className="ml-1.5 text-xs text-muted">(you)</span>
+                                                            <span className="ml-1.5 text-xs text-gray-500">(you)</span>
                                                         )}
                                                     </span>
                                                 )}
                                             </td>
                                             {/* Amount */}
-                                            <td className="whitespace-nowrap px-4 py-3 font-medium text-primary">
+                                            <td className="whitespace-nowrap px-4 py-3 font-medium text-white">
                                                 {formatAmount(exp)}
                                             </td>
                                             {/* Split type */}
@@ -1010,66 +1003,61 @@ export default function GroupDetail() {
     const { group, members } = data;
 
     return (
-        <div className="min-h-screen bg-base text-primary font-sans selection:bg-indigo-500/30 selection:text-indigo-500 relative">
-            <div className="fixed inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-indigo-500/10 via-base to-base pointer-events-none" />
-            
+        <div className="min-h-screen bg-gradient-to-br from-gray-950 via-gray-900 to-indigo-950 text-white">
             {/* ── Navbar ── */}
-            <header className="sticky top-0 z-40 border-b border-panel-border bg-base/80 backdrop-blur-xl">
-                <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3.5 sm:px-6">
-                    <div className="flex items-center gap-3">
-                        <Link
-                            to="/dashboard"
-                            className="flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-semibold text-muted transition-colors hover:bg-hover hover:text-primary"
-                        >
-                            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" />
-                            </svg>
-                            Dashboard
-                        </Link>
-                        <span className="text-panel-border">/</span>
-                        <span className="text-sm font-bold text-primary truncate font-display">{group.name}</span>
-                    </div>
-                    <ThemeToggle />
+            <header className="sticky top-0 z-40 border-b border-gray-700/40 bg-gray-950/80 backdrop-blur-md">
+                <div className="mx-auto flex max-w-7xl items-center gap-3 px-4 py-3 sm:px-6">
+                    <Link
+                        to="/dashboard"
+                        className="flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-sm text-gray-400 transition hover:bg-gray-800 hover:text-white"
+                    >
+                        <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                        </svg>
+                        Dashboard
+                    </Link>
+                    <span className="text-gray-600">/</span>
+                    <span className="text-sm font-medium text-white truncate">{group.name}</span>
                 </div>
             </header>
 
             {/* ── Group Header ── */}
-            <div className="relative z-10 mx-auto max-w-7xl px-4 pt-8 pb-6 sm:px-6 animate-fade-in">
-                <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
-                    <div className="space-y-3">
-                        <h1 className="text-3xl font-extrabold tracking-tight text-primary sm:text-4xl font-display">
+            <div className="mx-auto max-w-7xl px-4 pt-8 pb-5 sm:px-6">
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                    <div className="space-y-2">
+                        <h1 className="text-2xl font-bold tracking-tight text-white sm:text-3xl">
                             {group.name}
                         </h1>
-                        <div className="flex flex-wrap items-center gap-3">
-                            <span className="inline-flex items-center gap-1.5 rounded-full bg-hover border border-panel-border px-3 py-1 text-xs font-bold uppercase tracking-wider text-secondary shadow-sm">
-                                <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <div className="flex flex-wrap items-center gap-2">
+                            <span className="inline-flex items-center gap-1.5 rounded-full bg-gray-800 border border-gray-700/60 px-2.5 py-1 text-xs font-medium text-gray-400">
+                                <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
                                 </svg>
                                 {members.length} {members.length === 1 ? "member" : "members"}
                             </span>
-                            <span className="text-xs font-medium text-muted">·</span>
-                            <span className="text-xs font-medium text-muted">Created {formatDate(group.createdAt)}</span>
+                            <span className="text-xs text-gray-600">·</span>
+                            <span className="text-xs text-gray-500">Created {formatDate(group.createdAt)}</span>
                         </div>
                     </div>
-                    <div className="flex shrink-0 items-center gap-3 self-start mt-2 sm:mt-0">
+                    <div className="flex shrink-0 items-center gap-2 self-start">
                         <button
                             id="download-import-report-button"
                             onClick={handleDownloadImportReport}
-                            className="flex items-center gap-2 rounded-xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-2.5 text-sm font-bold text-emerald-300 transition-all hover:bg-emerald-500/20 hover:border-emerald-500/40 hover:shadow-[0_0_15px_rgba(16,185,129,0.1)] focus:outline-none focus:ring-4 focus:ring-emerald-500/20"
+                            className="flex items-center gap-2 rounded-xl border border-emerald-500/40 bg-emerald-600/10 px-4 py-2.5 text-sm font-semibold text-emerald-300 transition hover:bg-emerald-600 hover:text-white hover:border-transparent focus:outline-none focus:ring-2 focus:ring-emerald-500"
                         >
                             <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5}
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
                                     d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                             </svg>
-                            Report
+                            Download Report
                         </button>
                         <button
                             id="import-csv-button"
                             onClick={() => navigate(`/groups/${groupId}/import`)}
-                            className="flex items-center gap-2 rounded-xl border border-indigo-500/20 bg-indigo-500/10 px-4 py-2.5 text-sm font-bold text-indigo-300 transition-all hover:bg-indigo-500/20 hover:border-indigo-500/40 hover:shadow-[0_0_15px_rgba(99,102,241,0.1)] focus:outline-none focus:ring-4 focus:ring-indigo-500/20"
+                            className="flex items-center gap-2 rounded-xl border border-indigo-500/40 bg-indigo-600/10 px-4 py-2.5 text-sm font-semibold text-indigo-300 transition hover:bg-indigo-600 hover:text-white hover:border-transparent focus:outline-none focus:ring-2 focus:ring-indigo-500"
                         >
                             <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5}
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
                                     d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
                             </svg>
                             Import CSV
@@ -1079,23 +1067,23 @@ export default function GroupDetail() {
             </div>
 
             {/* ── Tabs ── */}
-            <div className="relative z-10 mx-auto max-w-7xl px-4 sm:px-6 animate-slide-up" style={{animationDelay: '50ms'}}>
-                <div className="flex border-b border-panel-border overflow-x-auto no-scrollbar">
+            <div className="mx-auto max-w-7xl px-4 sm:px-6">
+                <div className="flex border-b border-gray-700/40">
                     {TABS.map(({ id, label, sub }) => (
                         <button
                             key={id}
                             id={`tab-${id.toLowerCase()}`}
                             onClick={() => setActiveTab(id)}
-                            className={`relative flex flex-col items-start px-5 py-4 text-left transition-colors whitespace-nowrap ${
+                            className={`relative flex flex-col items-start px-4 py-3 text-left transition-colors ${
                                 activeTab === id
-                                    ? "text-primary"
-                                    : "text-muted hover:text-secondary"
+                                    ? "text-indigo-400"
+                                    : "text-gray-400 hover:text-gray-200"
                             }`}
                         >
-                            <span className={`text-sm font-bold ${activeTab === id ? 'font-display tracking-tight' : ''}`}>{label}</span>
-                            <span className={`text-[11px] font-semibold mt-1 uppercase tracking-wider ${activeTab === id ? "text-indigo-500" : "text-muted"}`}>{sub}</span>
+                            <span className="text-sm font-semibold">{label}</span>
+                            <span className={`text-xs mt-0.5 ${activeTab === id ? "text-indigo-400/60" : "text-gray-600"}`}>{sub}</span>
                             {activeTab === id && (
-                                <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-indigo-500 shadow-[0_0_8px_rgba(99,102,241,0.8)]" />
+                                <span className="absolute bottom-0 left-0 right-0 h-0.5 rounded-full bg-indigo-500" />
                             )}
                         </button>
                     ))}

@@ -475,6 +475,9 @@ router.get("/:groupId/balances", async (req, res) => {
 
             if (creditor.balance < 0.01) creditors.shift();
             if (debtor.balance > -0.01) debtors.shift();
+
+            creditors.sort((a, b) => b.balance - a.balance);
+            debtors.sort((a, b) => a.balance - b.balance);
         }
 
         // ── STEP 9: Respond ───────────────────────────────────────────────────

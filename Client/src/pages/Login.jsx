@@ -1,7 +1,6 @@
 import { useState, useContext } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { AuthContext } from "../context/AuthContext";
-import ThemeToggle from "../components/ThemeToggle";
 
 // Seeded demo accounts — mirrors Server/prisma/seed.js
 const DEMO_USERS = [
@@ -55,38 +54,32 @@ export default function Login() {
     }
 
     return (
-        <div className="flex min-h-screen bg-base text-primary font-sans selection:bg-indigo-500/30 selection:text-indigo-200 transition-colors duration-300">
-            <div className="absolute top-4 right-4 z-50">
-                <ThemeToggle />
-            </div>
+        <div className="flex min-h-screen bg-gray-950">
             {/* ── Left panel — branding ── */}
-            <div className="hidden lg:flex lg:w-1/2 flex-col justify-between bg-panel p-12 relative overflow-hidden border-r border-panel-border">
+            <div className="hidden lg:flex lg:w-1/2 flex-col justify-between bg-gradient-to-br from-indigo-600 via-indigo-700 to-purple-800 p-12 relative overflow-hidden">
                 <div className="absolute inset-0 overflow-hidden pointer-events-none">
-                    <div className="absolute -top-32 -right-32 h-96 w-96 rounded-full bg-indigo-500/20 blur-[100px] animate-pulse" />
-                    <div className="absolute top-1/2 -left-32 h-96 w-96 rounded-full bg-purple-600/10 blur-[120px]" />
+                    <div className="absolute -top-32 -right-32 h-96 w-96 rounded-full bg-white/5 blur-3xl" />
+                    <div className="absolute -bottom-32 -left-32 h-96 w-96 rounded-full bg-purple-500/20 blur-3xl" />
                 </div>
 
-                <div className="relative flex items-center gap-3 animate-fade-in">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-hover backdrop-blur-md border border-panel-border shadow-lg">
+                <div className="relative flex items-center gap-3">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/20 backdrop-blur-sm">
                         <span className="text-xl">💸</span>
                     </div>
-                    <span className="text-xl font-bold text-primary tracking-tight font-display">Splitwise</span>
+                    <span className="text-xl font-bold text-white tracking-tight">splitwise</span>
                 </div>
 
-                <div className="relative space-y-6 animate-slide-up">
-                    <h2 className="text-5xl font-extrabold text-primary leading-tight font-display tracking-tight">
-                        Split expenses,<br />
-                        <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-purple-400">
-                            not friendships.
-                        </span>
+                <div className="relative space-y-6">
+                    <h2 className="text-4xl font-bold text-white leading-tight">
+                        Split expenses,<br />not friendships.
                     </h2>
-                    <p className="text-lg text-secondary leading-relaxed max-w-sm">
-                        Track shared costs, settle debts instantly, and always know who owes what — beautifully.
+                    <p className="text-lg text-indigo-200 leading-relaxed max-w-sm">
+                        Track shared costs, settle debts instantly, and always know who owes what — without the awkward conversations.
                     </p>
                     <div className="flex flex-wrap gap-2 pt-2">
                         {["Group expenses", "Smart splits", "CSV import", "Instant balances"].map((f) => (
-                            <span key={f} className="inline-flex items-center gap-1.5 rounded-full bg-panel border border-panel-border px-3 py-1.5 text-sm font-medium text-secondary backdrop-blur-md shadow-sm transition hover:bg-hover">
-                                <svg className="h-3.5 w-3.5 text-indigo-500" fill="currentColor" viewBox="0 0 20 20">
+                            <span key={f} className="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1 text-sm font-medium text-white backdrop-blur-sm">
+                                <svg className="h-3 w-3" fill="currentColor" viewBox="0 0 20 20">
                                     <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                                 </svg>
                                 {f}
@@ -95,46 +88,42 @@ export default function Login() {
                     </div>
                 </div>
 
-                <div className="relative rounded-2xl bg-panel backdrop-blur-xl border border-panel-border p-6 animate-fade-in shadow-2xl">
-                    <p className="text-sm text-secondary leading-relaxed italic">
-                        "Finally stopped using WhatsApp threads to track who paid what. This handles everything automatically, and it looks stunning."
+                <div className="relative rounded-2xl bg-white/10 backdrop-blur-sm border border-white/20 p-5">
+                    <p className="text-sm text-indigo-100 leading-relaxed">
+                        "Finally stopped using WhatsApp threads to track who paid what. splitwise handles everything automatically."
                     </p>
-                    <p className="mt-4 text-xs font-semibold text-indigo-500 uppercase tracking-wider">— Kunal, Goa trip 2025</p>
+                    <p className="mt-3 text-xs font-semibold text-indigo-200">— Kunal, Goa trip 2025</p>
                 </div>
             </div>
 
             {/* ── Right panel — form ── */}
-            <div className="relative flex flex-1 flex-col items-center justify-center px-6 py-12 lg:px-16 overflow-y-auto">
-                <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-indigo-500/5 via-transparent to-transparent pointer-events-none lg:hidden" />
-                
+            <div className="flex flex-1 flex-col items-center justify-center px-6 py-12 lg:px-16 overflow-y-auto">
                 {/* Mobile logo */}
-                <div className="mb-10 flex items-center gap-2 lg:hidden relative z-10 animate-fade-in">
+                <div className="mb-8 flex items-center gap-2 lg:hidden">
                     <span className="text-2xl">💸</span>
-                    <span className="text-xl font-bold text-primary font-display tracking-tight">Splitwise</span>
+                    <span className="text-xl font-bold text-white">splitwise</span>
                 </div>
 
-                <div className="w-full max-w-sm relative z-10 animate-slide-up">
-                    <div className="mb-8">
-                        <h1 className="text-3xl font-extrabold text-primary font-display tracking-tight">Welcome back</h1>
-                        <p className="mt-2 text-sm text-secondary">Sign in to your account to continue</p>
+                <div className="w-full max-w-sm">
+                    <div className="mb-7">
+                        <h1 className="text-2xl font-bold text-white">Welcome back</h1>
+                        <p className="mt-1 text-sm text-gray-400">Sign in to your account to continue</p>
                     </div>
 
                     {/* ─── Demo Accounts Panel ────────────────────────────────────── */}
-                    <div className="mb-8 rounded-2xl border border-indigo-500/20 bg-indigo-500/5 p-5 backdrop-blur-sm shadow-xl">
-                        <div className="mb-4 flex items-center justify-between">
-                            <div className="flex items-center gap-2.5">
-                                <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-indigo-500/20 text-sm border border-indigo-500/30">
-                                    🚀
-                                </div>
-                                <span className="text-sm font-semibold text-indigo-200">Try a demo account</span>
+                    <div className="mb-6 rounded-2xl border border-indigo-500/30 bg-indigo-500/5 p-4">
+                        <div className="mb-3 flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                                <span className="text-base">🚀</span>
+                                <span className="text-sm font-semibold text-indigo-300">Try a demo account</span>
                             </div>
-                            <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-2.5 py-1 text-[10px] font-bold text-emerald-400 uppercase tracking-wider">
-                                <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]" />
-                                Pre-loaded
+                            <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/25 bg-emerald-500/10 px-2 py-0.5 text-xs font-medium text-emerald-400">
+                                <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-400" />
+                                43 expenses pre-loaded
                             </span>
                         </div>
 
-                        <div className="grid grid-cols-3 gap-2.5">
+                        <div className="grid grid-cols-3 gap-2">
                             {DEMO_USERS.map((u) => {
                                 const busy = quickLoading === u.email;
                                 return (
@@ -144,54 +133,55 @@ export default function Login() {
                                         onClick={() => handleQuickLogin(u)}
                                         disabled={!!quickLoading}
                                         title={u.email}
-                                        className={`relative flex flex-col items-center gap-2 rounded-xl border px-2 py-3.5 text-center transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 disabled:cursor-not-allowed disabled:opacity-60 hover:-translate-y-1 hover:shadow-lg ${u.highlight
-                                            ? "border-indigo-400/40 bg-indigo-500/10 hover:bg-indigo-500/20 hover:border-indigo-400/60 shadow-[0_0_15px_rgba(99,102,241,0.1)]"
-                                            : "border-panel-border bg-panel hover:bg-hover hover:border-panel-border"
+                                        className={`relative flex flex-col items-center gap-1.5 rounded-xl border px-2 py-3 text-center transition-all focus:outline-none focus:ring-2 focus:ring-indigo-500/50 disabled:cursor-not-allowed disabled:opacity-60 active:scale-95 ${u.highlight
+                                            ? "border-indigo-400/50 bg-indigo-600/20 hover:bg-indigo-600/35"
+                                            : "border-gray-700/60 bg-gray-800/40 hover:bg-gray-700/60"
                                             }`}
                                     >
                                         {u.highlight && (
-                                            <span className="absolute -top-2.5 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full bg-gradient-to-r from-indigo-500 to-purple-500 px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-white shadow-md border border-white/20">
+                                            <span className="absolute -top-2 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full bg-indigo-500 px-2 py-px text-[9px] font-bold uppercase tracking-wide text-white shadow">
                                                 Start here
                                             </span>
                                         )}
                                         {busy ? (
-                                            <span className="h-7 w-7 animate-spin rounded-full border-2 border-indigo-500 border-t-transparent" />
+                                            <span className="h-7 w-7 animate-spin rounded-full border-2 border-indigo-400 border-t-transparent" />
                                         ) : (
-                                            <span className="text-2xl leading-none select-none drop-shadow-sm">{u.emoji}</span>
+                                            <span className="text-2xl leading-none select-none">{u.emoji}</span>
                                         )}
-                                        <span className="text-xs font-semibold leading-none text-primary mt-0.5">{u.name}</span>
+                                        <span className="text-xs font-semibold leading-none text-white">{u.name}</span>
+                                        <span className="text-[10px] leading-tight text-gray-400">{u.role}</span>
                                     </button>
                                 );
                             })}
                         </div>
 
-                        <p className="mt-4 text-center text-[10px] text-slate-500 font-medium tracking-wide">
-                            One click — no typing needed &nbsp;·&nbsp; pwd:{" "}
-                            <span className="font-mono text-slate-400 bg-white/5 px-1 rounded">password123</span>
+                        <p className="mt-3 text-center text-[10px] text-gray-600">
+                            One click — no typing needed &nbsp;·&nbsp; password:{" "}
+                            <span className="font-mono text-gray-500">password123</span>
                         </p>
                     </div>
 
                     {/* Divider */}
-                    <div className="mb-6 flex items-center gap-4 opacity-60">
-                        <div className="h-px flex-1 bg-gradient-to-r from-transparent to-slate-700" />
-                        <span className="text-xs font-medium text-slate-500 uppercase tracking-widest">or</span>
-                        <div className="h-px flex-1 bg-gradient-to-l from-transparent to-slate-700" />
+                    <div className="mb-5 flex items-center gap-3">
+                        <div className="h-px flex-1 bg-gray-800" />
+                        <span className="text-xs text-gray-600">or sign in manually</span>
+                        <div className="h-px flex-1 bg-gray-800" />
                     </div>
 
                     <form id="login-form" onSubmit={handleSubmit} className="space-y-5">
                         {/* Error banner */}
                         {error && (
-                            <div className="flex items-start gap-3 rounded-xl border border-rose-500/30 bg-rose-500/10 px-4 py-3 shadow-lg animate-scale-in">
-                                <svg className="mt-0.5 h-4 w-4 shrink-0 text-rose-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <div className="flex items-start gap-3 rounded-xl border border-red-500/20 bg-red-500/10 px-4 py-3">
+                                <svg className="mt-0.5 h-4 w-4 shrink-0 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
                                 </svg>
-                                <p className="text-sm font-medium text-rose-300">{error}</p>
+                                <p className="text-sm text-red-400">{error}</p>
                             </div>
                         )}
 
                         {/* Email */}
                         <div className="space-y-1.5">
-                            <label htmlFor="login-email" className="block text-xs font-semibold text-muted uppercase tracking-wider ml-1">
+                            <label htmlFor="login-email" className="block text-sm font-medium text-gray-300">
                                 Email address
                             </label>
                             <input
@@ -201,14 +191,14 @@ export default function Login() {
                                 required
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}
-                                className="w-full rounded-xl border border-panel-border bg-panel px-4 py-3.5 text-sm text-primary placeholder-muted transition-all focus:border-indigo-500/50 focus:bg-hover focus:outline-none focus:ring-4 focus:ring-indigo-500/10"
+                                className="w-full rounded-xl border border-gray-700 bg-gray-800/80 px-4 py-3 text-sm text-white placeholder-gray-500 transition focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/30"
                                 placeholder="you@example.com"
                             />
                         </div>
 
                         {/* Password */}
                         <div className="space-y-1.5">
-                            <label htmlFor="login-password" className="block text-xs font-semibold text-muted uppercase tracking-wider ml-1">
+                            <label htmlFor="login-password" className="block text-sm font-medium text-gray-300">
                                 Password
                             </label>
                             <div className="relative">
@@ -219,13 +209,13 @@ export default function Login() {
                                     required
                                     value={password}
                                     onChange={(e) => setPassword(e.target.value)}
-                                    className="w-full rounded-xl border border-panel-border bg-panel px-4 py-3.5 pr-12 text-sm text-primary placeholder-muted transition-all focus:border-indigo-500/50 focus:bg-hover focus:outline-none focus:ring-4 focus:ring-indigo-500/10"
+                                    className="w-full rounded-xl border border-gray-700 bg-gray-800/80 px-4 py-3 pr-11 text-sm text-white placeholder-gray-500 transition focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/30"
                                     placeholder="••••••••"
                                 />
                                 <button
                                     type="button"
                                     onClick={() => setShowPassword((s) => !s)}
-                                    className="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 text-muted transition hover:text-primary rounded-lg hover:bg-hover"
+                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 transition hover:text-gray-200"
                                     tabIndex={-1}
                                     aria-label={showPassword ? "Hide password" : "Show password"}
                                 >
@@ -248,26 +238,30 @@ export default function Login() {
                             id="login-submit"
                             type="submit"
                             disabled={isLoading}
-                            className="w-full rounded-xl bg-gradient-to-r from-indigo-500 to-purple-600 px-4 py-3.5 text-sm font-bold text-white shadow-lg shadow-indigo-500/25 transition-all hover:shadow-indigo-500/40 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] focus:outline-none focus:ring-4 focus:ring-indigo-500/30 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0"
+                            className="w-full rounded-xl bg-indigo-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-indigo-500 active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 focus:ring-offset-gray-950 disabled:cursor-not-allowed disabled:opacity-50"
                         >
                             {isLoading ? (
                                 <span className="flex items-center justify-center gap-2">
-                                    <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" />
+                                    <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
                                     Signing in…
                                 </span>
                             ) : "Sign in"}
                         </button>
                     </form>
 
-                    <div className="mt-8 flex justify-center">
-                        <Link
-                            to="/signup"
-                            className="group flex items-center gap-2 text-sm font-medium text-secondary transition hover:text-primary"
-                        >
-                            Don't have an account? 
-                            <span className="text-indigo-500 group-hover:text-indigo-600 transition-colors">Create one free &rarr;</span>
-                        </Link>
+                    {/* Signup link */}
+                    <div className="my-6 flex items-center gap-3">
+                        <div className="h-px flex-1 bg-gray-800" />
+                        <span className="text-xs text-gray-600">New here?</span>
+                        <div className="h-px flex-1 bg-gray-800" />
                     </div>
+
+                    <Link
+                        to="/signup"
+                        className="flex w-full items-center justify-center rounded-xl border border-gray-700 bg-gray-800/40 px-4 py-3 text-sm font-medium text-gray-300 transition hover:border-gray-600 hover:text-white"
+                    >
+                        Create a free account →
+                    </Link>
                 </div>
             </div>
         </div>

@@ -3,7 +3,6 @@ import { useNavigate } from "react-router-dom";
 import { toast } from "react-hot-toast";
 import api from "../api/axios";
 import { useAuth } from "../context/AuthContext";
-import ThemeToggle from "../components/ThemeToggle";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -24,14 +23,14 @@ function avatarColor(name = "") {
 
 function SkeletonCard() {
     return (
-        <div className="animate-pulse rounded-2xl bg-panel border border-panel-border p-5 space-y-4 backdrop-blur-sm">
+        <div className="animate-pulse rounded-2xl bg-gray-800/50 border border-gray-700/30 p-5 space-y-4">
             <div className="flex items-center justify-between">
-                <div className="h-4 w-20 rounded-md bg-hover" />
-                <div className="h-5 w-12 rounded-full bg-hover" />
+                <div className="h-4 w-20 rounded-md bg-gray-700" />
+                <div className="h-5 w-12 rounded-full bg-gray-700" />
             </div>
-            <div className="h-5 w-2/3 rounded-md bg-hover" />
-            <div className="h-4 w-1/3 rounded-md bg-hover" />
-            <div className="h-10 w-full rounded-xl bg-hover" />
+            <div className="h-5 w-2/3 rounded-md bg-gray-700" />
+            <div className="h-4 w-1/3 rounded-md bg-gray-700" />
+            <div className="h-10 w-full rounded-xl bg-gray-700" />
         </div>
     );
 }
@@ -42,43 +41,36 @@ function GroupCard({ group, onOpen }) {
     const isActive = group.userStatus === "active";
 
     return (
-        <div className="group relative flex flex-col rounded-2xl bg-panel border border-panel-border p-5 transition-all duration-300 hover:-translate-y-1.5 hover:border-indigo-500/40 hover:bg-hover hover:shadow-[0_8px_30px_rgba(99,102,241,0.1)] backdrop-blur-sm overflow-hidden">
-            <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/0 via-transparent to-purple-500/0 group-hover:from-indigo-500/5 group-hover:to-purple-500/5 transition-colors duration-500 pointer-events-none" />
-            
+        <div className="group flex flex-col rounded-2xl bg-gray-800/50 border border-gray-700/30 p-5 transition-all duration-200 hover:-translate-y-0.5 hover:border-indigo-500/40 hover:shadow-xl hover:shadow-indigo-500/5 hover:bg-gray-800/80">
             {/* Top row */}
-            <div className="relative z-10 mb-4 flex items-center justify-between">
-                <span className="text-xs font-medium text-muted">
+            <div className="mb-4 flex items-center justify-between">
+                <span className="text-xs text-gray-500">
                     {new Date(group.createdAt).toLocaleDateString("en-IN", { month: "short", year: "numeric" })}
                 </span>
-                <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider ${
-                    isActive ? "bg-emerald-500/10 text-emerald-500 border border-emerald-500/20" : "bg-slate-500/10 text-slate-500 border border-slate-500/20"
+                <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ${
+                    isActive ? "bg-emerald-500/15 text-emerald-400" : "bg-gray-600/30 text-gray-400"
                 }`}>
-                    <span className={`h-1.5 w-1.5 rounded-full ${isActive ? "bg-emerald-500 shadow-[0_0_8px_rgba(52,211,153,0.8)]" : "bg-slate-500"}`} />
+                    <span className={`h-1.5 w-1.5 rounded-full ${isActive ? "bg-emerald-400" : "bg-gray-500"}`} />
                     {isActive ? "Active" : "Left"}
                 </span>
             </div>
 
             {/* Name */}
-            <h3 className="relative z-10 mb-1.5 text-lg font-bold text-primary leading-snug group-hover:text-indigo-500 transition-colors line-clamp-2 font-display tracking-tight">
+            <h3 className="mb-1 text-base font-semibold text-white leading-snug group-hover:text-indigo-300 transition-colors line-clamp-2">
                 {group.name}
             </h3>
 
             {/* Member count */}
-            <p className="relative z-10 mb-6 text-sm text-muted flex items-center gap-1.5">
-                <svg className="h-4 w-4 opacity-70" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-                </svg>
-                <span>
-                    <span className="font-semibold text-secondary">{group.memberCount}</span>{" "}
-                    {group.memberCount === 1 ? "member" : "members"}
-                </span>
+            <p className="mb-5 text-sm text-gray-500">
+                <span className="font-medium text-gray-300">{group.memberCount}</span>{" "}
+                {group.memberCount === 1 ? "member" : "members"}
             </p>
 
             {/* CTA */}
             <button
                 id={`open-group-${group.id}`}
                 onClick={() => onOpen(group.id)}
-                className="relative z-10 mt-auto w-full rounded-xl border border-panel-border bg-panel py-2.5 text-sm font-semibold text-secondary transition-all duration-300 group-hover:border-indigo-500/50 group-hover:bg-indigo-500/10 group-hover:text-indigo-600 focus:outline-none focus:ring-2 focus:ring-indigo-500/40"
+                className="mt-auto w-full rounded-xl border border-gray-700 bg-gray-700/30 py-2.5 text-sm font-medium text-gray-200 transition-all hover:border-indigo-500/50 hover:bg-indigo-600/20 hover:text-indigo-300"
             >
                 Open Group
             </button>
@@ -106,9 +98,7 @@ function CreateGroupModal({ onClose, onCreate }) {
         setIsLoading(true);
         try {
             const res = await api.post("/api/groups", { name: name.trim() });
-            toast.success(`"${res.data.group.name}" created!`, {
-                style: { background: '#1e293b', color: '#f8fafc', border: '1px solid rgba(255,255,255,0.1)' }
-            });
+            toast.success(`"${res.data.group.name}" created!`);
             onCreate(res.data.group);
             onClose();
         } catch (err) {
@@ -119,17 +109,15 @@ function CreateGroupModal({ onClose, onCreate }) {
     }
 
     return (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-md p-4 animate-fade-in" onClick={onClose}>
-            <div className="w-full max-w-md rounded-2xl bg-base border border-panel-border shadow-2xl animate-scale-in overflow-hidden relative" onClick={(e) => e.stopPropagation()}>
-                <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-indigo-500 to-purple-500" />
-                
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/70 backdrop-blur-sm p-4" onClick={onClose}>
+            <div className="w-full max-w-md rounded-2xl bg-gray-900 border border-gray-700/60 shadow-2xl" onClick={(e) => e.stopPropagation()}>
                 {/* Header */}
-                <div className="flex items-center justify-between border-b border-panel-border px-6 py-5 bg-panel">
+                <div className="flex items-center justify-between border-b border-gray-800 px-5 py-4">
                     <div>
-                        <h2 className="text-lg font-bold text-primary font-display tracking-tight">Create a new group</h2>
-                        <p className="text-xs text-muted mt-1">You'll be added as the first member</p>
+                        <h2 className="text-base font-semibold text-white">Create a new group</h2>
+                        <p className="text-xs text-gray-500 mt-0.5">You'll be added as the first member</p>
                     </div>
-                    <button onClick={onClose} className="rounded-xl p-2 text-muted hover:bg-hover hover:text-primary transition-colors" aria-label="Close">
+                    <button onClick={onClose} className="rounded-lg p-1.5 text-gray-400 hover:bg-gray-800 hover:text-white transition" aria-label="Close">
                         <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                         </svg>
@@ -137,18 +125,13 @@ function CreateGroupModal({ onClose, onCreate }) {
                 </div>
 
                 {/* Body */}
-                <form id="create-group-form" onSubmit={handleSubmit} className="p-6 space-y-5">
+                <form id="create-group-form" onSubmit={handleSubmit} className="p-5 space-y-4">
                     {error && (
-                        <div className="flex items-start gap-2.5 rounded-xl bg-rose-500/10 border border-rose-500/20 px-4 py-3 shadow-inner">
-                            <svg className="mt-0.5 h-4 w-4 shrink-0 text-rose-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
-                            </svg>
-                            <p className="text-sm font-medium text-rose-300">{error}</p>
-                        </div>
+                        <div className="rounded-xl bg-red-500/10 border border-red-500/20 px-4 py-3 text-sm text-red-400">{error}</div>
                     )}
 
-                    <div className="space-y-2">
-                        <label htmlFor="group-name-input" className="block text-xs font-semibold text-muted uppercase tracking-wider ml-1">
+                    <div className="space-y-1.5">
+                        <label htmlFor="group-name-input" className="block text-sm font-medium text-gray-300">
                             Group name
                         </label>
                         <input
@@ -157,26 +140,23 @@ function CreateGroupModal({ onClose, onCreate }) {
                             autoFocus
                             value={name}
                             onChange={(e) => setName(e.target.value)}
-                            placeholder="e.g. Goa Trip 2025, Flat 4B"
-                            className="w-full rounded-xl border border-panel-border bg-panel px-4 py-3.5 text-sm text-primary placeholder-muted transition-all focus:border-indigo-500/50 focus:bg-base focus:outline-none focus:ring-4 focus:ring-indigo-500/10 shadow-inner"
+                            placeholder="e.g. Goa Trip 2025, Flat 4B, Office Lunch"
+                            className="w-full rounded-xl border border-gray-700 bg-gray-800 px-4 py-3 text-sm text-white placeholder-gray-500 transition focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/30"
                         />
+                        <p className="text-xs text-gray-600">Pick something your group will recognise</p>
                     </div>
 
-                    <div className="flex gap-3 pt-4">
-                        <button type="button" onClick={onClose} className="flex-1 rounded-xl border border-panel-border bg-transparent py-3 text-sm font-semibold text-secondary transition-all hover:bg-hover hover:text-primary focus:outline-none focus:ring-4 focus:ring-panel-border">
+                    <div className="flex gap-3 pt-1">
+                        <button type="button" onClick={onClose} className="flex-1 rounded-xl border border-gray-700 py-2.5 text-sm font-medium text-gray-300 transition hover:border-gray-600 hover:text-white">
                             Cancel
                         </button>
                         <button
                             id="create-group-submit"
                             type="submit"
                             disabled={isLoading || !name.trim()}
-                            className="flex-1 rounded-xl bg-gradient-to-r from-indigo-500 to-purple-600 py-3 text-sm font-bold text-white shadow-lg shadow-indigo-500/25 transition-all hover:shadow-indigo-500/40 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] focus:outline-none focus:ring-4 focus:ring-indigo-500/30 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0"
+                            className="flex-1 rounded-xl bg-indigo-600 py-2.5 text-sm font-semibold text-white transition hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-50"
                         >
-                            {isLoading ? (
-                                <span className="flex justify-center items-center gap-2">
-                                    <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" />
-                                </span>
-                            ) : "Create Group"}
+                            {isLoading ? "Creating…" : "Create Group"}
                         </button>
                     </div>
                 </form>
@@ -224,36 +204,31 @@ export default function Dashboard() {
     const activeCount = groups.filter((g) => g.userStatus === "active").length;
 
     return (
-        <div className="min-h-screen bg-base text-primary font-sans selection:bg-indigo-500/30 selection:text-indigo-500 relative">
-            <div className="fixed inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-indigo-500/10 via-base to-base pointer-events-none" />
-            
+        <div className="min-h-screen bg-gray-950 text-white">
             {/* ── Top nav ── */}
-            <header className="sticky top-0 z-40 border-b border-panel-border bg-base/80 backdrop-blur-xl">
-                <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3.5 sm:px-6">
+            <header className="sticky top-0 z-40 border-b border-gray-800 bg-gray-950/90 backdrop-blur-md">
+                <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3 sm:px-6">
                     {/* Logo */}
-                    <div className="flex items-center gap-3">
-                        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-panel border border-panel-border shadow-sm">
-                            <span className="text-lg leading-none mt-0.5">💸</span>
+                    <div className="flex items-center gap-2.5">
+                        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-600/20 border border-indigo-500/30">
+                            <span className="text-base">💸</span>
                         </div>
-                        <span className="text-xl font-extrabold tracking-tight text-primary font-display">Splitwise</span>
+                        <span className="text-base font-bold tracking-tight text-white">Splitwise</span>
                     </div>
 
                     {/* Right side */}
                     <div className="flex items-center gap-3">
                         {/* User pill */}
-                        <div className="hidden sm:flex items-center gap-2.5 rounded-full bg-panel border border-panel-border pl-1.5 pr-4 py-1.5 shadow-sm">
-                            <div className={`flex h-6 w-6 items-center justify-center rounded-full text-[10px] font-bold text-white shadow-inner ${avatarColor(user?.name)}`}>
+                        <div className="hidden sm:flex items-center gap-2.5 rounded-xl bg-gray-800/60 border border-gray-700/40 px-3 py-1.5">
+                            <div className={`flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold text-white ${avatarColor(user?.name)}`}>
                                 {getInitials(user?.name)}
                             </div>
-                            <span className="text-sm font-medium text-secondary">{user?.name}</span>
+                            <span className="text-sm text-gray-300">{user?.name}</span>
                         </div>
-                        
-                        <ThemeToggle />
-                        
                         <button
                             id="logout-button"
                             onClick={handleLogout}
-                            className="rounded-xl border border-panel-border px-3.5 py-2 text-xs font-bold uppercase tracking-wider text-muted transition-all hover:bg-hover hover:text-primary focus:outline-none focus:ring-2 focus:ring-panel-border"
+                            className="rounded-lg border border-gray-700 px-3 py-1.5 text-xs font-medium text-gray-400 transition hover:border-gray-500 hover:text-white"
                         >
                             Log out
                         </button>
@@ -261,15 +236,15 @@ export default function Dashboard() {
                 </div>
             </header>
 
-            <main className="relative mx-auto max-w-6xl px-4 py-8 sm:px-6 z-10 animate-fade-in">
+            <main className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
                 {/* ── Page header ── */}
-                <div className="mb-8 flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
+                <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                     <div>
-                        <h1 className="text-3xl font-extrabold text-primary sm:text-4xl font-display tracking-tight">Your groups</h1>
-                        <p className="mt-2 text-sm text-muted">
+                        <h1 className="text-2xl font-bold text-white sm:text-3xl">Your groups</h1>
+                        <p className="mt-1 text-sm text-gray-500">
                             {isLoading ? "Loading…" : (
                                 <>
-                                    <span className="text-secondary font-semibold">{activeCount}</span> active{" "}
+                                    <span className="text-gray-300 font-medium">{activeCount}</span> active{" "}
                                     {activeCount !== 1 ? "groups" : "group"}
                                     {groups.length > activeCount && ` · ${groups.length - activeCount} left`}
                                 </>
@@ -279,21 +254,19 @@ export default function Dashboard() {
                     <button
                         id="create-group-button"
                         onClick={() => setShowModal(true)}
-                        className="group flex items-center gap-2 self-start rounded-xl bg-gradient-to-r from-indigo-500 to-purple-600 px-5 py-3 text-sm font-bold text-white shadow-lg shadow-indigo-500/25 transition-all hover:shadow-indigo-500/40 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] focus:outline-none focus:ring-4 focus:ring-indigo-500/30 sm:self-auto"
+                        className="flex items-center gap-2 self-start rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 sm:self-auto"
                     >
-                        <span className="flex h-5 w-5 items-center justify-center rounded-full bg-white/20">
-                            <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M12 4v16m8-8H4" />
-                            </svg>
-                        </span>
+                        <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                        </svg>
                         New group
                     </button>
                 </div>
 
                 {/* ── Search bar (only shown when groups exist) ── */}
                 {!isLoading && groups.length > 3 && (
-                    <div className="mb-8 relative animate-slide-up" style={{animationDelay: '100ms'}}>
-                        <svg className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <div className="mb-5 relative">
+                        <svg className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                         </svg>
                         <input
@@ -301,48 +274,45 @@ export default function Dashboard() {
                             placeholder="Search groups…"
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
-                            className="w-full rounded-2xl border border-panel-border bg-panel py-3 pl-11 pr-4 text-sm text-primary placeholder-muted transition-all focus:border-indigo-500/50 focus:bg-hover focus:outline-none focus:ring-4 focus:ring-indigo-500/10 sm:max-w-xs shadow-inner"
+                            className="w-full rounded-xl border border-gray-700/60 bg-gray-800/40 py-2.5 pl-10 pr-4 text-sm text-white placeholder-gray-500 transition focus:border-indigo-500/60 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 sm:max-w-xs"
                         />
                     </div>
                 )}
 
                 {/* ── Content ── */}
                 {isLoading ? (
-                    <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
                         {Array.from({ length: 6 }).map((_, i) => <SkeletonCard key={i} />)}
                     </div>
                 ) : filteredGroups.length === 0 && searchQuery ? (
-                    <div className="flex flex-col items-center justify-center rounded-3xl border border-dashed border-panel-border bg-panel py-24 text-center backdrop-blur-sm animate-fade-in">
-                        <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-hover border border-panel-border mb-4 shadow-sm">
-                            <p className="text-2xl mt-1">🔍</p>
-                        </div>
-                        <p className="text-lg font-bold text-primary font-display">No groups match "{searchQuery}"</p>
-                        <button onClick={() => setSearchQuery("")} className="mt-3 text-sm font-medium text-indigo-500 hover:text-indigo-600 transition-colors">Clear search</button>
+                    <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-gray-700/60 py-20 text-center">
+                        <p className="text-3xl mb-3">🔍</p>
+                        <p className="font-semibold text-white">No groups match "{searchQuery}"</p>
+                        <button onClick={() => setSearchQuery("")} className="mt-3 text-sm text-indigo-400 hover:text-indigo-300 transition">Clear search</button>
                     </div>
                 ) : groups.length === 0 ? (
                     /* Empty state */
-                    <div className="flex flex-col items-center justify-center rounded-3xl border border-dashed border-panel-border bg-panel py-28 text-center backdrop-blur-sm animate-fade-in shadow-xl">
-                        <div className="relative mb-6 flex h-20 w-20 items-center justify-center rounded-2xl bg-hover border border-panel-border shadow-lg">
-                            <div className="absolute inset-0 bg-indigo-500/20 blur-xl rounded-full" />
-                            <span className="text-4xl relative z-10 mt-1">👥</span>
+                    <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-gray-700/60 py-24 text-center">
+                        <div className="mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-gray-800/60 border border-gray-700/40">
+                            <span className="text-3xl">👥</span>
                         </div>
-                        <h2 className="mb-2 text-2xl font-extrabold text-primary font-display tracking-tight">No groups yet</h2>
-                        <p className="mb-8 max-w-sm text-sm text-muted leading-relaxed">
+                        <h2 className="mb-2 text-xl font-semibold text-white">No groups yet</h2>
+                        <p className="mb-6 max-w-xs text-sm text-gray-400 leading-relaxed">
                             Create your first group to start tracking shared expenses with friends, flatmates, or your team.
                         </p>
                         <button
                             id="create-group-empty-button"
                             onClick={() => setShowModal(true)}
-                            className="group flex items-center gap-2 rounded-xl bg-hover border border-panel-border px-6 py-3 text-sm font-bold text-primary transition-all hover:bg-panel hover:shadow-lg focus:outline-none focus:ring-4 focus:ring-panel-border active:scale-95"
+                            className="flex items-center gap-2 rounded-xl bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-indigo-500"
                         >
                             <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4" />
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                             </svg>
                             Create your first group
                         </button>
                     </div>
                 ) : (
-                    <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 animate-slide-up" style={{animationDelay: '50ms'}}>
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
                         {filteredGroups.map((group) => (
                             <GroupCard
                                 key={group.id}
