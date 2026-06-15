@@ -1499,10 +1499,16 @@ router.post("/:groupId/confirm", async (req, res) => {
 router.get("/:groupId/report", async (req, res) => {
     try {
         const { groupId } = req.params;
+        const { sessionId } = req.query;
 
-        // Fetch logs for this group
+        // Build where clause — filter by sessionId if provided, otherwise all logs for the group
+        const where = sessionId
+            ? { sessionId }
+            : { groupId };
+
+        // Fetch logs
         const logs = await prisma.importLog.findMany({
-            where: { groupId },
+            where,
             orderBy: { createdAt: "desc" },
         });
 
@@ -1533,6 +1539,51 @@ router.get("/:groupId/report", async (req, res) => {
         return res.status(200).send(csvContent);
     } catch (err) {
         console.error("[GET /:groupId/report]", err);
+        return res.status(500).json({ error: err.message || "Internal server error" });
+    }
+});
+
+
+// ─────────────────────────────────────────────────────────────────────────────
+// POST /:groupId/direct
+//
+// "Seeder-mode" import. Runs the exact same CSV processing pipeline as
+// seed.js (via the shared csvImporter library) in a single API call.
+// No preview / confirm round-trips needed.
+//
+// Request: multipart/form-data  { file: <csv> }
+// Response: { imported, settlements, skipped, excluded, errored, errors, log }
+// ─────────────────────────────────────────────────────────────────────────────
+
+const { processCsvBuffer } = require("../lib/csvImporter");
+
+router.post("/:groupId/direct", upload.single("file"), async (req, res) => {
+    const { groupId } = req.params;
+
+    if (!req.file) {
+        return res.status(400).json({ error: "No CSV file uploaded." });
+    }
+
+    try {
+        const result = await processCsvBuffer({
+            csvBuffer: req.file.buffer,
+            groupId,
+            prisma,
+        });
+
+        return res.status(200).json({
+            sessionId:            null,
+            imported:             result.imported,
+            importedAsSettlements: result.settlements,
+            skipped:              result.skipped,
+            excluded:             result.excluded,
+            errored:              result.errored,
+            errors:               result.errors,
+            log:                  result.log,
+            totalProcessed:       result.imported + result.skipped + result.excluded + result.errored,
+        });
+    } catch (err) {
+        console.error("[POST /:groupId/direct]", err);
         return res.status(500).json({ error: err.message || "Internal server error" });
     }
 });
