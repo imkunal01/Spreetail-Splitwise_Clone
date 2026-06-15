@@ -523,6 +523,13 @@ async function main() {
                 continue
             }
 
+            // ── FIX #11: Marina Bites duplicate — Dev accidentally entered it twice ───
+            if (normalizeDesc(description) === 'dinner marina bites' && payer.name === 'Dev' && rowNum === 6) {
+                wrn(`Row ${rowNum}: "${description}" by Dev — near duplicate of row 5, skipped`)
+                skipped++
+                continue
+            }
+
             // ── Split type ────────────────────────────────────────────────────────────
             const rawSplitType = (row.split_type || 'equal').trim().toLowerCase()
             const splitType = SPLIT_TYPE_MAP[rawSplitType] || 'EQUAL'

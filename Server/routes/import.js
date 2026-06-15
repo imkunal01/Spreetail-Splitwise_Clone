@@ -190,6 +190,7 @@ const SEEDER_DEFAULT_ACTIONS = {
     INVALID_SPLIT_TYPE:       "skip",
     PERCENTAGE_SUM_INVALID:   "normalize_to_100",
     DUPLICATE_EXACT:          "skip",
+    DUPLICATE_NEAR_EXACT:     "skip",              // seed.js skips near-duplicates (e.g. Marina bites)
     CONFLICTING_DUPLICATE:    "skip",              // seed.js skips near-duplicate rows
 };
 
@@ -837,8 +838,8 @@ router.post("/:groupId/preview", upload.single("file"), async (req, res) => {
             }
 
             // ─────────────────────────────────────────────────────────────────
-            // CHECK 19: CONFLICTING DUPLICATE
-            // Same date + similar description + different amount or payer
+            // CHECK 19: SIMILAR DUPLICATE
+            // Same date + similar description
             // ─────────────────────────────────────────────────────────────────
             if (parsedDateResult) {
                 const dateStr = parsedDateResult.date.toISOString().split("T")[0];
@@ -847,25 +848,33 @@ router.post("/:groupId/preview", upload.single("file"), async (req, res) => {
                 for (const prev of batchDescriptions) {
                     if (prev.date !== dateStr) continue;
                     const distance = levenshtein(desc, prev.description);
-                    if (
-                        distance <= 3 &&
-                        (prev.amount !== parsedAmount || prev.payer !== (row.paid_by || "").trim())
-                    ) {
-                        anomalies.push({
-                            type: "CONFLICTING_DUPLICATE",
-                            message:
-                                "Similar expense exists on the same date with different amount or payer.",
-                            detail: {
-                                thisRow: {
-                                    description: row.description,
-                                    amount: parsedAmount,
-                                    payer: row.paid_by,
+                    
+                    if (distance <= 3) {
+                        const isNearExact = prev.amount === parsedAmount && prev.payer === (row.paid_by || "").trim();
+                        
+                        if (isNearExact) {
+                            anomalies.push({
+                                type: "DUPLICATE_NEAR_EXACT",
+                                message: "This looks like a duplicate expense with a slightly different description.",
+                                detail: {
+                                    thisRow: { description: row.description, amount: parsedAmount, payer: row.paid_by },
+                                    conflictingRow: prev,
                                 },
-                                conflictingRow: prev,
-                            },
-                            options: ["import_this", "import_both", "skip_both"],
-                            defaultAction: "import_this",
-                        });
+                                options: ["skip", "import_anyway"],
+                                defaultAction: "skip",
+                            });
+                        } else {
+                            anomalies.push({
+                                type: "CONFLICTING_DUPLICATE",
+                                message: "Similar expense exists on the same date with different amount or payer.",
+                                detail: {
+                                    thisRow: { description: row.description, amount: parsedAmount, payer: row.paid_by },
+                                    conflictingRow: prev,
+                                },
+                                options: ["import_this", "import_both", "skip_both"],
+                                defaultAction: "import_this",
+                            });
+                        }
                         break; // report only the first conflict per row
                     }
                 }
